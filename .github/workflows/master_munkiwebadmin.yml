@@ -10,17 +10,15 @@ on:
       - master
   workflow_dispatch:
 
-defaults:
-  run:
-    shell: bash
-    working-directory: ./app
-
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Copy App to root
+        run: cp app/* .
 
       - name: Set up Python version
         uses: actions/setup-python@v1
@@ -47,7 +45,7 @@ jobs:
         with:
           name: python-app
           path: |
-            app/release.zip
+            release.zip
             !venv/
 
   deploy:
