@@ -18,7 +18,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Copy App to root
-        run: cp app/* .
+        run: cp -r app/* .
 
       - name: Set up Python version
         uses: actions/setup-python@v1
