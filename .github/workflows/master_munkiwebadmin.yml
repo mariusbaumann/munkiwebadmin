@@ -10,6 +10,11 @@ on:
       - master
   workflow_dispatch:
 
+defaults:
+  run:
+    shell: bash
+    working-directory: ./app
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -28,10 +33,10 @@ jobs:
           source venv/bin/activate
 
       - name: Install dependencies
-        run: pip install -r app/requirements_azure.txt
+        run: pip install -r requirements_azure.txt
 
       - name: Run collectstatic
-        run: python app/manage.py collectstatic
+        run: python manage.py collectstatic
 
       # Optional: Add step to run tests here (PyTest, Django test suites, etc.)
       - name: Zip artifact for deployment
