@@ -2,12 +2,12 @@
 # More GitHub Actions for Azure: https://github.com/Azure/actions
 # More info on Python, GitHub Actions, and Azure App Service: https://aka.ms/python-webapps-actions
 
-name: Build and deploy Python app to Azure Web App - mwa2test
+name: Build and deploy Python app to Azure Web App - munkiwebadmin
 
 on:
   push:
     branches:
-      - main
+      - master
   workflow_dispatch:
 
 jobs:
@@ -26,22 +26,11 @@ jobs:
         run: |
           python -m venv venv
           source venv/bin/activate
-      
+
       - name: Install dependencies
-        run: pip install -r requirements_azure.txt
+        run: pip install -r requirements.txt
 
-      - name: create munkirepo directory
-        run: mkdir munkirepo
-        
-      - name: Install munkitools
-        run: curl -Lk -o /tmp/munkitools.zip `curl --silent https://api.github.com/repos/munki/munki/releases/latest | /usr/bin/awk '/zipball_url/ { print $2 }' | sed 's/[",]//g'` && unzip /tmp/munkitools.zip -d /tmp/munkitools && rm -rf /tmp/munkitools.zip && cp -R /tmp/munkitools/munki-munki-*/code/client munkitools && rm -rf /tmp/munkitools
-
-      - name: list
-        run: pwd; ls -al
-
-      - name: Run collectstatic
-        run: python manage.py collectstatic --noinput
-
+      # Optional: Add step to run tests here (PyTest, Django test suites, etc.)
       - name: Zip artifact for deployment
         run: zip release.zip ./* -r
 
@@ -75,6 +64,4 @@ jobs:
         with:
           app-name: 'munkiwebadmin'
           slot-name: 'Production'
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_5CB3031423E1419797F08022A62EE6A7 }}
-
-          
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_52B6EA32FBB6413DBA9A9E4745A5955A }}
