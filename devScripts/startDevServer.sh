@@ -7,17 +7,11 @@ export ALLOWED_HOSTS='localhost 127.0.0.1 [::1]'
 export DEFAULT_MANIFEST=''
 export PROXY_ADDRESS=''
 export DEBUG=1
-export MUNKI_REPO_DIR='/Users/Shared/munki_repo'
-export MAKECATALOGS_PATH='/usr/local/munki/makecatalogs'
 export FIELD_ENCRYPTION_KEY='VDKEyIzST-hbtX7rvA7LPue63E0XB0m3pZEFWKk0BKI='
 export REPO_MANAGEMENT_ONLY='False'
+export MUNKI_REPO_URL='file:///Users/Shared/munkirepo'
+export MUNKITOOLS_DIR='/usr/local/munki'
 
-# Create the munki repo directory
-if [ ! -d $MUNKI_REPO_DIR ]; then
-    mkdir -p $MUNKI_REPO_DIR
-fi
-
-cd app
 
 python manage.py makemigrations manifests pkgsinfo process reports inventory
 python manage.py migrate --noinput
