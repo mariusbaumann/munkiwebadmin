@@ -59,8 +59,6 @@ jobs:
     environment:
       name: 'Production'
       url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
-    permissions:
-      id-token: write #This is required for requesting the JWT
 
     steps:
       - name: Download artifact from build job
@@ -70,18 +68,13 @@ jobs:
 
       - name: Unzip artifact for deployment
         run: unzip release.zip
-      
-      - name: Login to Azure
-        uses: azure/login@v1
-        with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_BC9164B293F84CCFBC68BA853E25D501 }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_ECC8AB704ADE4496A6182134A179F224 }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_D0630760F9C34418BC525FA7E5B05746 }}
 
       - name: 'Deploy to Azure Web App'
         uses: azure/webapps-deploy@v2
         id: deploy-to-webapp
         with:
-          app-name: 'mwa2test'
+          app-name: 'munkiwebadmin'
           slot-name: 'Production'
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_5CB3031423E1419797F08022A62EE6A7 }}
+
           
