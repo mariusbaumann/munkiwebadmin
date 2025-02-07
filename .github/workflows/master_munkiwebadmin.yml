@@ -26,9 +26,6 @@ jobs:
         run: |
           python -m venv venv
           source venv/bin/activate
-      
-      - name: Install dependencies
-        run: pip install -r requirements_azure.txt
 
       - name: Install dependencies
         run: mv requirements_azure.txt requirements.txt
@@ -71,6 +68,9 @@ jobs:
 
       - name: Unzip artifact for deployment
         run: unzip release.zip
+
+      - name: install dependencies
+        run: apt-get update && apt-get install -y dmg2img p7zip-full
 
       - name: 'Deploy to Azure Web App'
         uses: azure/webapps-deploy@v2
