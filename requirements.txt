@@ -1,4 +1,4 @@
-django==4.2.16
+django==4.2.18
 psycopg2-binary==2.9.9
 gunicorn==22.0.0
 django-cors-headers==4.3.1
@@ -8,3 +8,4 @@ django-auth-adfs==1.14.0
 setuptools==70.0.0
 azure-storage-blob==12.20.0
 whitenoise==6.7.0
+pyobjc==11.0
