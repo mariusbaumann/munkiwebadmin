@@ -7,6 +7,9 @@ from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.conf import settings
 
+from django.utils import timezone #added 
+from django.contrib.sessions.models import Session #added
+
 from pkgsinfo.models import Pkginfo, PKGSINFO_STATUS_TAG
 from process.models import Process
 from api.models import MunkiRepo, \
@@ -64,37 +67,48 @@ def index(request):
     '''Index methods: GET and POST'''
     if request.method == "GET":
         LOGGER.debug("Got index request for pkgsinfo")
+
+        # Calculate active user count
+        now = timezone.now()
+        active_sessions = Session.objects.filter(expire_date__gte=now)
+        active_user_count = active_sessions.count()
+
         context = {'page': 'pkgsinfo',
                    'search': request.GET.get('search', ''),
-                   'catalog': request.GET.get('catalog', 'all')}
+                   'catalog': request.GET.get('catalog', 'all'),
+                   'active_user_count': active_user_count  # Add this line
+                   }
         return render(request, 'pkgsinfo/pkgsinfo.html', context=context)
-    if request.method == "DELETE":
-        LOGGER.info("Got mass delete request for pkginfos")
-        if not request.user.has_perm('pkgsinfo.delete_pkginfofile'):
-            return HttpResponse(
-                json.dumps({
-                    'result': 'failed',
-                    'exception_type': 'PkginfoDeletePermissionDenied',
-                    'detail': "Missing needed permissions"}),
-                content_type='application/json', status=403)
-        json_data = json.loads(request.body)
-        pkginfo_list = json_data.get('pkginfo_list', [])
-        try:
-            Pkginfo.mass_delete(
-                pkginfo_list, request.user,
-                delete_pkgs=json_data.get('deletePkg', False)
-            )
-        except FileError as err:
-            return HttpResponse(
-                json.dumps({'result': 'failed',
-                            'exception_type': str(type(err)),
-                            'detail': str(err)}),
-                content_type='application/json', status=403)
-        else:
-            return HttpResponse(
-                json.dumps({'result': 'success'}),
-                content_type='application/json')
-    if request.method == 'POST':       
+    if request.method == 'POST':
+        # DELETE
+        if request.META.has_key('HTTP_X_METHODOVERRIDE'):
+            http_method = request.META['HTTP_X_METHODOVERRIDE']
+            if http_method.lower() == 'delete':
+                LOGGER.info("Got mass delete request for pkginfos")
+                if not request.user.has_perm('pkgsinfo.delete_pkginfofile'):
+                    return HttpResponse(
+                        json.dumps({
+                            'result': 'failed',
+                            'exception_type': 'PkginfoDeletePermissionDenied',
+                            'detail': "Missing needed permissions"}),
+                        content_type='application/json', status=403)
+                json_data = json.loads(request.body)
+                pkginfo_list = json_data.get('pkginfo_list', [])
+                try:
+                    Pkginfo.mass_delete(
+                        pkginfo_list, request.user,
+                        delete_pkgs=json_data.get('deletePkg', False)
+                    )
+                except FileError as err:
+                    return HttpResponse(
+                        json.dumps({'result': 'failed',
+                                    'exception_type': str(type(err)),
+                                    'detail': str(err)}),
+                        content_type='application/json', status=403)
+                else:
+                    return HttpResponse(
+                        json.dumps({'result': 'success'}),
+                        content_type='application/json')
         # regular POST (update/change)
         LOGGER.info("Got mass update request for pkginfos")
         if not request.user.has_perm('pkgsinfo.change_pkginfofile'):

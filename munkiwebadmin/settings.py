@@ -21,6 +21,8 @@ REPO_MANAGEMENT_ONLY = os.getenv("REPO_MANAGEMENT_ONLY", 'False').lower() in ('t
 SECRET_KEY = os.environ.get("SECRET_KEY", "CHANGEME!!!")
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "localhost 127.0.0.1 [::1]").split(" ")
 CSRF_TRUSTED_ORIGINS = os.environ.get("CSRF_TRUSTED_ORIGINS", "http://localhost").split(" ")
+CSRF_COOKIE_SECURE = False  # Set to True if using HTTPS
+CSRF_COOKIE_HTTPONLY = False
 
 # Munki repo settings
 MUNKI_REPO_URL = os.getenv('MUNKI_REPO_URL', 'file:///munkirepo')
@@ -63,6 +65,14 @@ LOGIN_EXEMPT_URLS = ()
 # django ldap auth
 USE_LDAP = False
 
+
+# Active Users
+
+SESSION_COOKIE_AGE = 3600  # 1 hour
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+SESSION_SAVE_EVERY_REQUEST = True
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
+
 ###########################################################################
 # munkiwebadmin-specific end
 ###########################################################################
@@ -89,6 +99,8 @@ INSTALLED_APPS = [
     'reports',
     'icons',
     'santa',
+    # New monitoring app
+    'monitoring',
 ]
 
 MIDDLEWARE = [

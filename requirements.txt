@@ -9,3 +9,4 @@ setuptools==75.8.0
 azure-storage-blob==12.24.1
 whitenoise==6.9.0
 pyobjc==11.0
+urllib3==1.26.20
