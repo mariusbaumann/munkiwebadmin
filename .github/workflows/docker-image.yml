@@ -27,4 +27,4 @@ jobs:
           context: .
           file: ./docker/Dockerfile.prod
           push: true
-          tags: ${{ secrets.DOCKER_USER }}/munkiwebadmin:latest
+          tags: ${{ secrets.DOCKER_USER }}/mwa3:latest
