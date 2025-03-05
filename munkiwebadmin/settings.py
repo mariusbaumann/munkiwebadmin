@@ -99,6 +99,7 @@ INSTALLED_APPS = [
     'reports',
     'icons',
     'santa',
+    'munkiwebadmin',
     # New monitoring app
     'monitoring',
 ]
@@ -296,7 +297,7 @@ AUTH_ADFS = {
     'CLIENT_SECRET': CLIENT_SECRET,
     'CLAIM_MAPPING': {'first_name': 'given_name',
                     'last_name': 'family_name',
-                    'email': 'upn',},
+                    'email': 'upn'},
     'MIRROR_GROUPS': True,
     'USERNAME_CLAIM': 'upn',
     'TENANT_ID': TENANT_ID,
