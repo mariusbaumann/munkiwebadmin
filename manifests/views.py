@@ -8,14 +8,7 @@ from django.contrib.auth.decorators import login_required
 from api.models import MunkiRepo, FileDoesNotExistError, FileReadError
 from process.models import Process
 
-# Added Active-Users related imports
-#####################################
-from django.utils import timezone
-from django.contrib.sessions.models import Session  # Import Session here
-
-import os
 from django.conf import settings
-#####################################
 import json
 import logging
 import plistlib
@@ -44,16 +37,6 @@ def status(request):
 @login_required
 def index(request, manifest_path=None):
     '''Returns manifest list or detail and includes active user count'''
-    # Add logic to count active users
-    try:
-        now = timezone.now()
-        # Filter for sessions that have not expired
-        active_sessions = Session.objects.filter(expire_date__gte=now)
-        active_user_count = active_sessions.count()
-        logger.info(f"Active user count: {active_user_count}")
-    except Exception as e:
-        logger.error(f"Error in active_users_count: {e}")
-        active_user_count = 0  # Fallback in case of error
 
     if manifest_path and is_ajax(request):
         # return manifest detail
@@ -85,12 +68,6 @@ def index(request, manifest_path=None):
     # Return list of available manifests
     LOGGER.debug("Got index request for manifests")
     context = {'page': 'manifests',
-               'manifest_name': manifest_path,
-               'active_user_count': active_user_count}  # Added active_user_count to context
+               'manifest_name': manifest_path}
     return render(request, 'manifests/manifests.html', context=context)
 
-# Toto je naše funkce pro uložení informací do textového souboru
-def log_user_action_to_file(user, action):
-    log_file_path = os.path.join(settings.BASE_DIR, 'user_action_log.txt')
-    with open(log_file_path, 'a') as log_file:
-        log_file.write(f'{timezone.now()} - {user.username} - {action}\n')

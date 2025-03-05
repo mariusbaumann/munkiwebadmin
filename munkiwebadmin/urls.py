@@ -34,6 +34,7 @@ urlpatterns = [
     url(r'^inventory/', include('inventory.urls')),
     url(r'^santa/', include('santa.urls')),
     url(r'^makecatalogs/', include('process.urls')),
+    url(r'^monitoring/', include('monitoring.urls')),
 ]
 
 if REPO_MANAGEMENT_ONLY:

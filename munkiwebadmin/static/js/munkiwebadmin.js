@@ -98,3 +98,50 @@ $(window).on('load', function() {
         $('#sidebar').removeClass('collapsed');
     }
 })
+
+
+document.addEventListener("DOMContentLoaded", function () {
+    // API-Endpunkt für aktive Benutzer
+    const activeUsersUrl = "/monitoring/get-active-users/";
+
+    // HTML-Elemente
+    const badgeElement = document.getElementById("activeUsersBadge");
+    const dropdownMenu = document.createElement("div");
+    dropdownMenu.classList.add("dropdown-menu", "dropdown-menu-end");
+    badgeElement.after(dropdownMenu);
+
+    // Funktion zum Abrufen der aktiven Benutzer
+    async function fetchActiveUsers() {
+        try {
+            const response = await fetch(activeUsersUrl);
+            if (!response.ok) throw new Error("Fehler beim Laden der aktiven Benutzer");
+
+            const data = await response.json();
+
+            // Anzahl der aktiven Benutzer aktualisieren
+            const activeUserCount = data.active_users.length;
+            badgeElement.querySelector(".badge").textContent = activeUserCount;
+
+            // Dropdown-Inhalt neu setzen
+            dropdownMenu.innerHTML = "";
+            if (activeUserCount === 0) {
+                dropdownMenu.innerHTML = '<span class="dropdown-item">Keine aktiven Benutzer</span>';
+            } else {
+                data.active_users.forEach(user => {
+                    const userItem = document.createElement("span");
+                    userItem.classList.add("dropdown-item");
+                    userItem.textContent = `${user.first_name} ${user.last_name} (${user.username})`;
+                    dropdownMenu.appendChild(userItem);
+                });
+            }
+        } catch (error) {
+            console.error("Fehler beim Abrufen der aktiven Benutzer:", error);
+        }
+    }
+
+    // Initiale Abfrage beim Laden der Seite
+    fetchActiveUsers();
+
+    // Alle 10 Sekunden aktualisieren
+    setInterval(fetchActiveUsers, 10000);
+});

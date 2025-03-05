@@ -113,7 +113,7 @@
                             </a>
                         </li>
                         {% endif %}
-                        <span class="bg-dark text-white text-center" id="activeUsersBadge">Active Users: <span id="activeUsersCount">{{ active_user_count }}</span>
+                        
                     </ul>
                 </div>
             </aside>
@@ -130,10 +130,20 @@
                     <form class="container-fluid search-box" role="search">
                         <input class="form-control me-2" type="search" id="listSearchField" placeholder="Search" value="{{search}}">
                     </form>
+                    
                     <div class="navbar-collapse">
                         <ul class="navbar-nav">
                             <li class="nav-item dropdown">
-                                <button class="btn" id="bd-theme" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <button class="btn" id="activeUsersBadge" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fa-solid fa-user-clock"></i>
+                                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                        {{ active_user_count }}
+                                        <span class="visually-hidden">active users</span>
+                                      </span>
+                                </button>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <button class="btn me-2" id="bd-theme" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                                     <i id="bd-theme-selector" class="fa-solid fa-circle-half-stroke"></i>
                                 </button>
                                 <div class="dropdown-menu dropdown-menu-end">
@@ -150,7 +160,7 @@
                             </li>
                             <li class="nav-item dropdown avatar">
                                 <a href="#" data-bs-toggle="dropdown" class="nav-icon pe-md-0">
-                                    <img alt="{{ username }}" src="{{ userImage }}" class="avatar img-fluid rounded" />
+                                    <img alt="{{ username }}" src="{{ userImage }}" class="avatar rounded-circle img-fluid" />
                                 </a>
                                 <div class="dropdown-menu dropdown-menu-end">
                                     <a href="/admin/" target="_blank" class="dropdown-item"><i class="fas fa-chalkboard-teacher fa-fw"></i>

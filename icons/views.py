@@ -5,8 +5,6 @@ from django.contrib.auth.decorators import login_required
 import logging
 import json
 from django.http import HttpResponse
-from django.utils import timezone  # Import Session here
-from django.contrib.sessions.models import Session  # Import Session here
 from process.models import Process
 
 from pkgsinfo.models import PKGSINFO_STATUS_TAG
@@ -18,20 +16,8 @@ def index(request):
     '''Index methods'''
     LOGGER.debug("Got index request for icons")
     
-    # Add logic to count active users
-    try:
-        now = timezone.now()
-        # Filter for sessions that have not expired
-        active_sessions = Session.objects.filter(expire_date__gte=now)
-        active_user_count = active_sessions.count()
-        LOGGER.info(f"Active user count: {active_user_count}")
-    except Exception as e:
-        LOGGER.error(f"Error in active_users_count: {e}")
-        active_user_count = 0  # Fallback in case of error
-    
     context = {
-        'page': 'icons',
-        'active_user_count': active_user_count  # Add active_user_count to context
+        'page': 'icons'
     }
     return render(request, 'icons/icons.html', context=context)
 

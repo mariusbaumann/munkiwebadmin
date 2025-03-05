@@ -7,9 +7,6 @@ from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.conf import settings
 
-from django.utils import timezone #added 
-from django.contrib.sessions.models import Session #added
-
 from pkgsinfo.models import Pkginfo, PKGSINFO_STATUS_TAG
 from process.models import Process
 from api.models import MunkiRepo, \
@@ -68,15 +65,9 @@ def index(request):
     if request.method == "GET":
         LOGGER.debug("Got index request for pkgsinfo")
 
-        # Calculate active user count
-        now = timezone.now()
-        active_sessions = Session.objects.filter(expire_date__gte=now)
-        active_user_count = active_sessions.count()
-
         context = {'page': 'pkgsinfo',
                    'search': request.GET.get('search', ''),
                    'catalog': request.GET.get('catalog', 'all'),
-                   'active_user_count': active_user_count  # Add this line
                    }
         return render(request, 'pkgsinfo/pkgsinfo.html', context=context)
     if request.method == 'POST':
