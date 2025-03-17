@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block page_title %}Overview{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-4">
+                <div class="card text-bg-primary">
+                    <div class="card-body d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="fas fa-box-open fa-3x"></i>
+                            <p class="card-text mt-2">Packages</p>
+                        </div>
+                        <h2 class="fw-bold">{{ pkgs|length }}</h2>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card text-bg-primary">
+                    <div class="card-body d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="fas fa-file-invoice fa-3x"></i>
+                            <p class="card-text mt-2">Manifests</p>
+                        </div>
+                        <h2 class="fw-bold">{{ manifest_count }}</h2>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card text-bg-primary">
+                    <div class="card-body d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="fas fa-regular fa-file-lines fa-3x"></i>
+                            <p class="card-text mt-2">Catalogs</p>
+                        </div>
+                        <h2 class="fw-bold">{{ catalog_count }}</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

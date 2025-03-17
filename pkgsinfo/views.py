@@ -6,6 +6,7 @@ from django.http import HttpResponse, Http404
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.conf import settings
+from django.http import JsonResponse
 
 from pkgsinfo.models import Pkginfo, PKGSINFO_STATUS_TAG
 from process.models import Process
@@ -17,6 +18,7 @@ import logging
 import os
 import plistlib
 import urllib
+import base64
 
 STATIC_URL = settings.STATIC_URL
 LOGGER = logging.getLogger('munkiwebadmin')
@@ -165,3 +167,88 @@ def detail(request, pkginfo_path):
                         'exception_type': 'MethodNotSupported',
                         'detail': 'POST/PUT/DELETE should use the API'}),
             content_type='application/json', status=404)
+
+
+def list_available_packages_json(request):
+    """Returns a JSON list of available packages with their versions"""
+
+    catalog = []
+    try:
+        catalogs_to_display = settings.CATALOGS_TO_DISPLAY
+    except:
+        catalogs_to_display = []
+
+    for catalog_to_display in catalogs_to_display:
+        catalog += MunkiRepo.read('catalogs', catalog_to_display)
+
+    package_dict = {}
+
+    for item in catalog:
+        package_name = item['name']
+
+        if package_name in package_dict:
+            existing_package = package_dict[package_name]
+            catalogs = item.get('catalogs', [])
+
+            for catalog in catalogs:
+                if catalog not in catalogs_to_display:
+                    continue
+
+                catalog_version = {
+                    'name': catalog,
+                    'version': item['version']
+                }
+
+                for existing_catalog in existing_package['catalogs']:
+                    if existing_catalog['name'] == catalog:
+                        existing_catalog['version'] = item['version']
+                        break
+                else:
+                    existing_package['catalogs'].append(catalog_version)
+
+        else:
+
+            display_name = item.get('display_name')
+            if display_name is None or display_name == '':
+                display_name = item['name']
+
+            package_item = {
+                'name': item['name'],
+                'display_name': display_name,
+                'version': item['version'],
+                'developer': item.get('developer', None),
+                'categorie': item.get('categorie', None),
+                'catalogs': [],
+                'description': item.get('description', ''),
+                'icon': None
+            }
+
+            catalogs = item.get('catalogs', [])
+            for catalog in catalogs:
+                if catalog not in catalogs_to_display:
+                    continue
+                catalog_version = {'name': catalog, 'version': item['version']}
+                package_item['catalogs'].append(catalog_version)
+
+            # Load the icon as a Base64-encoded string
+            icon_name = item.get('icon_name', item['name'] + '.png')
+            icon_list = MunkiRepo.list('icons')
+
+            if icon_name in icon_list:
+                icon_path = MunkiRepo.get('icons', icon_name)
+                if isinstance(icon_path, str):  # If it's a file path
+                    try:
+                        with open(icon_path, "rb") as icon_file:
+                            encoded_icon = base64.b64encode(icon_file.read()).decode("utf-8")
+                            package_item['icon'] = f"data:image/png;base64,{encoded_icon}"
+                    except FileNotFoundError:
+                        package_item['icon'] = None
+                else:
+                    package_item['icon'] = f"data:image/png;base64,{base64.b64encode(icon_path).decode('utf-8')}"
+            package_dict[package_name] = package_item
+
+    return JsonResponse({"data": list(package_dict.values())}, safe=False)
+
+def list_available_packages(request):
+    context = {'page': 'packages'}
+    return render(request, 'pkgsinfo/package_list.html', context=context)

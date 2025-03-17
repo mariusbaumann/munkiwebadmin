@@ -1,9 +1,7 @@
 from django.urls import re_path as url
-from api.views import ReportsListAPIView, ReportsDetailAPIView, CatalogsListView, CatalogsDetailAPIView, ManifestsListView, ManifestsDetailAPIView, PkgsinfoListView, PkgsinfoDetailAPIView, PkgsListView, PkgsDetailAPIView, IconsListView, IconsDetailAPIView
+from api.views import CatalogsListView, CatalogsDetailAPIView, ManifestsListView, ManifestsDetailAPIView, PkgsinfoListView, PkgsinfoDetailAPIView, PkgsListView, PkgsDetailAPIView, IconsListView, IconsDetailAPIView
 
 urlpatterns = [
-    url(r'^reports/?$', ReportsListAPIView.as_view(), name="report-list"),
-    url(r'^reports/(?P<serial_number>[a-zA-Z0-9]+)$', ReportsDetailAPIView.as_view(), name="report-detail"),
     url(r'^catalogs/?$', CatalogsListView.as_view(), name="catalog-list"),
     url(r'^catalogs/(?P<filepath>.*$)', CatalogsDetailAPIView.as_view(), name="catalog-detail"),
     url(r'^manifests/?$', ManifestsListView.as_view(), name="manifest-list"),

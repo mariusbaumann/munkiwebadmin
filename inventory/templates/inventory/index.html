@@ -1,9 +1,0 @@
-{% extends 'base.html' %}
-
-{% block page_title %}Inventory{% endblock %}
-
-{% block content %}
-  {% with machine_list=machines list_title='Inventory Clients' %}
-    {% include 'inventory/machinetable.html' %}
-  {% endwith %}
-{% endblock %}

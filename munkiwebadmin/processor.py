@@ -18,11 +18,6 @@ except:
     BASE_DIR = ""
 
 try:
-    REPO_MANAGEMENT_ONLY = settings.REPO_MANAGEMENT_ONLY
-except:
-    REPO_MANAGEMENT_ONLY = False
-
-try:
     ENTRA_ONLY = settings.ENTRA_ONLY
 except:
     ENTRA_ONLY = False
@@ -31,6 +26,11 @@ try:
     TENANT_ID = settings.TENANT_ID
 except:
     TENANT_ID = None
+
+try:
+    ENABLE_REPO_VIEW = settings.ENABLE_REPO_VIEW
+except:
+    ENABLE_REPO_VIEW = None
 
 def index(request):
     """
@@ -62,7 +62,7 @@ def index(request):
             logger.error(f"Error retrieving profile picture for {request.user.username}: {e}")
 
     return {
-        'REPO_MANAGEMENT_ONLY': REPO_MANAGEMENT_ONLY,
+        'ENABLE_REPO_VIEW': ENABLE_REPO_VIEW,
         'ENTRA_ONLY': ENTRA_ONLY,
         'TENANT_ID': TENANT_ID,
         'APPNAME': APPNAME,

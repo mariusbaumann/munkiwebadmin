@@ -136,14 +136,14 @@ function initManifestsTable() {
         "targets": 0,
         "render": render_name,
         }],
-        'sDom': '"top"i',
         "paging":false,
-        "scrollY": 'calc(100vh - 350px)',
+        "scrollY": 'calc(100vh - 270px)',
         "scrollCollapse": true,
-        "bFilter": true,
+        "dom": 'lrt',
         "bStateSave": true,
         "aaSorting": [[0,'asc']]
     });
+
     // start our monitoring timer loop
     monitor_manifest_list();
     // tie our search field to the table

@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block page_title %}Packages <span class="badge bg-secondary" id="item-count-badge">0</span>{% endblock %}
+{% block content %}
+<div class="row">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-body">
+        <table class="table table-striped wraptext" id='packageTable'>
+          <thead>
+              <tr>
+                  <th>Icon</th>
+                  <th>Display Name</th>
+                  <th>Developer</th>
+                  <th>Catalogs</th>
+              </tr>
+          </thead>
+          <tbody>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  let table = $('#packageTable').DataTable({
+        "ajax": "{% url 'list_available_packages_json' %}",
+        "processing": true,
+        "paging": false,
+        "dom": 'lrt',
+        "scrollY": 'calc(100vh - 190px)',
+        "columns": [
+            { "data": "icon", "render": function (data) {
+                return data ? `<img src="${data}" style="width:40px;height:40px;">` : "";
+            }},
+            { "data": "display_name" },
+            { "data": "developer" },
+            { "data": "catalogs", "render": function (data) {
+                return data.map(catalog => `<span class="badge text-bg-primary">${catalog.name} (${catalog.version})</span>`).join("<br>");
+            }}
+        ],
+        "order": [[1, "asc"]],
+        "columnDefs": [
+            { "orderable": false, "targets": 0 },
+            { "orderable": true, "targets": 1 },
+            { "orderable": true, "targets": 2 }, 
+            { "orderable": false, "targets": 3 }
+        ]
+    });
+
+    $('#listSearchField').on('keyup', function () {
+        table.search(this.value).draw();
+    });
+});
+</script>
+{% endblock %}
+
+

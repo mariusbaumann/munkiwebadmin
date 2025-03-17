@@ -21,14 +21,11 @@ from api.models import MunkiRepo
 from api.models import FileReadError, \
                        FileDoesNotExistError, FileDeleteError
 
-from reports.models import Machine
 from manifests.models import ManifestFile
 from pkgsinfo.models import PkginfoFile
 from catalogs.models import Catalogs
 
 from api.serializers import (
-    MachineListSerializer, 
-    MachineDetailSerializer,
     ManifestSerializer
 )
 
@@ -182,34 +179,6 @@ class PlistXMLParser(BaseParser):
             LOGGER.error('Error reading plist: %s', err)
             raise FileReadError(err)
 
-class ReportsListAPIView(ListAPIView):
-    permission_classes = [DjangoModelPermissions]
-
-    queryset = Machine.objects.all()
-    serializer_class = MachineListSerializer
-
-
-class ReportsDetailAPIView(CreateModelMixin, DestroyModelMixin, UpdateModelMixin, RetrieveAPIView):
-    permission_classes = [DjangoModelPermissions]
-    
-    queryset = Machine.objects.all()
-    serializer_class = MachineDetailSerializer
-    
-    lookup_url_kwarg = "serial_number"
-    pk_url_kwarg = "serial_number"
-
-    def post(self, request, *args, **kwargs):
-        return self.create(request, *args, **kwargs)
-
-    def put(self, request, *args, **kwargs):
-        return self.update(request, *args, **kwargs)
-
-    def patch(self, request, *args, **kwargs):
-        return self.partial_update(request, *args, **kwargs)
-
-    def delete(self, request, *args, **kwargs):
-        return self.destroy(request, *args, **kwargs)
-    
 
 class CatalogsListView(GenericAPIView, ListModelMixin):
     http_method_names = ['get', 'post']

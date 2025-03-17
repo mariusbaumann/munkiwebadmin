@@ -210,11 +210,10 @@ function initPkginfoTable() {
             "searchable": false,
             "orderable": false,
           },],
-        'sDom': '"top"i',
         "paging":false,
-        "scrollY": 'calc(100vh - 350px)',
+        "scrollY": 'calc(100vh - 260px)',
         "scrollCollapse": true,
-        "bFilter": true,
+        "dom": 'lrt',
         "bStateSave": true,
         "aaSorting": [[0,'asc']]
      });

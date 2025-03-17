@@ -17,7 +17,6 @@ MEDIA_URL = "/media/"
 # APPNAME is user-visible web app name
 APPNAME = os.getenv('APPNAME', 'MunkiWebAdmin')
 DEFAULT_MANIFEST = os.getenv('DEFAULT_MANIFEST', 'serial_number')
-REPO_MANAGEMENT_ONLY = os.getenv("REPO_MANAGEMENT_ONLY", 'False').lower() in ('true', '1', 't')
 SECRET_KEY = os.environ.get("SECRET_KEY", "CHANGEME!!!")
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "localhost 127.0.0.1 [::1]").split(" ")
 CSRF_TRUSTED_ORIGINS = os.environ.get("CSRF_TRUSTED_ORIGINS", "http://localhost").split(" ")
@@ -54,8 +53,9 @@ if os.environ.get('WEBSITE_HOSTNAME'):
 # debug mode
 DEBUG = os.getenv("DEBUG", 'False').lower() in ('true', '1', 't')
 
-#not changing this
-MUNKISCRIPTS_PATH = os.path.join(BASE_DIR, 'munkiscripts', 'build')
+# package display settings
+ENABLE_REPO_VIEW = os.getenv('ENABLE_REPO_VIEW', 'False').lower() in ('true', '1', 't')
+CATALOGS_TO_DISPLAY = os.getenv('CATALOGS_TO_DISPLAY', '[]').split()
 
 # CORS settings
 CORS_ORIGIN_ALLOW_ALL = DEBUG
@@ -65,9 +65,7 @@ LOGIN_EXEMPT_URLS = ()
 # django ldap auth
 USE_LDAP = False
 
-
 # Active Users
-
 SESSION_COOKIE_AGE = 3600  # 1 hour
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 SESSION_SAVE_EVERY_REQUEST = True
@@ -94,13 +92,10 @@ INSTALLED_APPS = [
     'catalogs',
     'pkgsinfo',
     'manifests',
-    'inventory',
     'process',
-    'reports',
     'icons',
     'santa',
     'munkiwebadmin',
-    # New monitoring app
     'monitoring',
 ]
 
@@ -287,9 +282,12 @@ REST_FRAMEWORK = {
 # azure adfs settings
 LOGIN_EXCLUDE_URLS = []
 if EXCLUDE_API:
-    LOGIN_EXCLUDE_URLS = [
-        '^api',
-    ]
+    LOGIN_EXCLUDE_URLS.append('^api',)
+
+if ENABLE_REPO_VIEW:
+    LOGIN_EXCLUDE_URLS.append('^packages')
+    LOGIN_EXCLUDE_URLS.append('^pkgsinfo/_package_json')
+    LOGIN_EXCLUDE_URLS.append('^')
 
 AUTH_ADFS = {
     'AUDIENCE': CLIENT_ID,
@@ -324,11 +322,10 @@ if CLIENT_SECRET:
         AUTHENTICATION_BACKENDS = AUTHENTICATION_BACKENDS + (AdfsAuthCodeBackend, AdfsAccessTokenBackend)
 
 LOGIN_URL='/login/'
-LOGIN_REDIRECT_URL = '/'
+LOGIN_REDIRECT_URL = '/dasboard/'
 
 if ENTRA_ONLY:
     LOGIN_URL = "django_auth_adfs:login"
-    LOGIN_REDIRECT_URL = '/'
 
 ADMINS = (
      ('Local Admin', 'admin@example.com'),

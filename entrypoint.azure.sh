@@ -5,7 +5,7 @@ apt-get update
 apt-get install -y p7zip-full
 
 # migrate database
-python manage.py makemigrations catalogs pkgsinfo reports manifests inventory icons santa process
+python manage.py makemigrations catalogs pkgsinfo manifests icons santa process munkiwebadmin
 python manage.py migrate
 
 python manage.py collectstatic --noinput
