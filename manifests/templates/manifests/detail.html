@@ -3,7 +3,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <h1 class="modal-title fs-5" id="manifestItemsLabel">{{ pathname }}</h1>
-        <div class='' id='delete_btn'>
+        <div class='ms-auto' id='delete_btn'>
         {% if perms.manifests.delete_manifestfile %}
             <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteConfirmationModal">Delete</button>
         {% endif %}
