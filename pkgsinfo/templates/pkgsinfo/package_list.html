@@ -41,6 +41,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 return data.map(catalog => `<span class="badge text-bg-primary">${catalog.name} (${catalog.version})</span>`).join("<br>");
             }}
         ],
+        "initComplete": function () {
+            $("#item-count-badge").text(this.api().rows().count());
+        },
         "order": [[1, "asc"]],
         "columnDefs": [
             { "orderable": false, "targets": 0 },
