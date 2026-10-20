@@ -18,5 +18,8 @@ if ENABLE_REPO_VIEW:
     urlpatterns.append(
         url(r'^_package_json', pkgsinfo.views.list_available_packages_json, name="list_available_packages_json"),
     )
+    urlpatterns.append(
+        url(r'^_package_icon/(?P<icon_name>.+)$', pkgsinfo.views.package_icon, name="package_icon"),
+    )
 
 urlpatterns.append(url(r'^(?P<pkginfo_path>^.*$)', pkgsinfo.views.detail))

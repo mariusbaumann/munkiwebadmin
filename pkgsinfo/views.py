@@ -7,6 +7,7 @@ from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.conf import settings
 from django.http import JsonResponse
+from django.urls import reverse
 
 from pkgsinfo.models import Pkginfo, PKGSINFO_STATUS_TAG
 from process.models import Process
@@ -18,7 +19,7 @@ import logging
 import os
 import plistlib
 import urllib
-import base64
+import mimetypes
 
 STATIC_URL = settings.STATIC_URL
 LOGGER = logging.getLogger('munkiwebadmin')
@@ -191,8 +192,12 @@ def list_available_packages_json(request):
         catalog += MunkiRepo.read('catalogs', catalog_to_display)
 
     package_dict = {}
+    icon_list = set(MunkiRepo.list('icons'))
+    created_by = getattr(settings, 'PACKAGES_CREATED_BY', '')
 
     for item in catalog:
+        if created_by and item.get('_metadata', {}).get('created_by') != created_by:
+            continue
         package_name = item['name']
 
         if package_name in package_dict:
@@ -239,24 +244,21 @@ def list_available_packages_json(request):
                 catalog_version = {'name': catalog, 'version': item['version']}
                 package_item['catalogs'].append(catalog_version)
 
-            # Load the icon as a Base64-encoded string
             icon_name = item.get('icon_name', item['name'] + '.png')
-            icon_list = MunkiRepo.list('icons')
-
             if icon_name in icon_list:
-                icon_path = MunkiRepo.get('icons', icon_name)
-                if isinstance(icon_path, str):  # If it's a file path
-                    try:
-                        with open(icon_path, "rb") as icon_file:
-                            encoded_icon = base64.b64encode(icon_file.read()).decode("utf-8")
-                            package_item['icon'] = f"data:image/png;base64,{encoded_icon}"
-                    except FileNotFoundError:
-                        package_item['icon'] = None
-                else:
-                    package_item['icon'] = f"data:image/png;base64,{base64.b64encode(icon_path).decode('utf-8')}"
+                package_item['icon'] = reverse('package_icon', args=[icon_name])
             package_dict[package_name] = package_item
 
     return JsonResponse({"data": list(package_dict.values())}, safe=False)
+
+def package_icon(request, icon_name):
+    '''Serves a repo icon with caching headers for the packages page'''
+    if icon_name not in MunkiRepo.list('icons'):
+        raise Http404
+    response = HttpResponse(MunkiRepo.get('icons', icon_name),
+                            content_type=mimetypes.guess_type(icon_name)[0] or 'image/png')
+    response['Cache-Control'] = 'public, max-age=86400'
+    return response
 
 def list_available_packages(request):
     context = {'page': 'packages'}

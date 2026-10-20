@@ -56,6 +56,8 @@ DEBUG = os.getenv("DEBUG", 'False').lower() in ('true', '1', 't')
 # package display settings
 ENABLE_REPO_VIEW = os.getenv('ENABLE_REPO_VIEW', 'False').lower() in ('true', '1', 't')
 CATALOGS_TO_DISPLAY = os.getenv('CATALOGS_TO_DISPLAY', '[]').split()
+# only show packages whose _metadata.created_by matches; empty shows all
+PACKAGES_CREATED_BY = os.getenv('PACKAGES_CREATED_BY', 'gitlab')
 
 # CORS settings
 CORS_ORIGIN_ALLOW_ALL = DEBUG

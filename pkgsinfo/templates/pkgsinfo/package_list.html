@@ -33,7 +33,7 @@ document.addEventListener("DOMContentLoaded", function () {
         "scrollY": 'calc(100vh - 190px)',
         "columns": [
             { "data": "icon", "render": function (data) {
-                return data ? `<img src="${data}" style="width:40px;height:40px;">` : "";
+                return data ? `<img src="${data}" loading="lazy" style="width:40px;height:40px;">` : "";
             }},
             { "data": "display_name" },
             { "data": "developer" },
