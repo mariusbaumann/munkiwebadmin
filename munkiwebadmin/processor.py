@@ -40,7 +40,9 @@ def index(request):
     """
     imgString = static('img/placeholder.jpg')  # Default image if no profile picture is found
 
-    if not TENANT_ID:
+    if not request.user.is_authenticated:
+        pass
+    elif not TENANT_ID:
         # If Azure AD is not used, attempt to retrieve the image from LDAP
         try:
             image = request.user.ldap_user.attrs.get("thumbnailPhoto", [None])[0]

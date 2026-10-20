@@ -13,7 +13,7 @@
 
         {% load static %}
         <!-- Bootstrap Core CSS -->
-        <link rel="stylesheet" href='{% get_static_prefix %}css/bootstrap.css' type="text/css" media="all" />
+        <link rel="stylesheet" href='{% get_static_prefix %}css/bootstrap.min.css' type="text/css" media="all" />
 
         <!-- Custom Fonts -->
         <link href="{% get_static_prefix %}fonts/fontawesome/css/all.min.css" rel="stylesheet" type="text/css">
@@ -86,7 +86,7 @@
   </head>
   <body class="text-center">
     <form class="form-signin" method="POST" action="{% url 'login' %}">
-      <img class="mb-4" src="{% get_static_prefix %}img/logo.png" alt="" height="64">
+      <img class="mb-4" src="{% get_static_prefix %}img/logo-light.png" alt="" height="64">
       <h1 class="h3 mb-3 font-weight-normal">{{ APPNAME }}</h1>
       {% csrf_token %}
       

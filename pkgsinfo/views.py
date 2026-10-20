@@ -8,6 +8,8 @@ from django.contrib.auth.decorators import login_required
 from django.conf import settings
 from django.http import JsonResponse
 from django.urls import reverse
+from django.core.cache import cache
+from multiprocessing.pool import ThreadPool
 
 from pkgsinfo.models import Pkginfo, PKGSINFO_STATUS_TAG
 from process.models import Process
@@ -179,6 +181,26 @@ def detail(request, pkginfo_path):
             content_type='application/json', status=404)
 
 
+def packages_created_by(created_by):
+    '''Returns a set of (name, version) of pkgsinfo created by created_by.
+    makecatalogs strips _metadata from catalogs, so read the pkgsinfo files'''
+    # ponytail: 5 min cache, new uploads show up delayed; invalidate on upload if that matters
+    cache_key = 'packages_created_by_' + created_by
+    allowed = cache.get(cache_key)
+    if allowed is None:
+        def read(path):
+            try:
+                pkginfo = MunkiRepo.read('pkgsinfo', path)
+            except Exception:
+                return None
+            if pkginfo.get('_metadata', {}).get('created_by') == created_by:
+                return (pkginfo.get('name'), pkginfo.get('version'))
+            return None
+        with ThreadPool(processes=8) as pool:
+            allowed = set(pool.map(read, MunkiRepo.list('pkgsinfo'))) - {None}
+        cache.set(cache_key, allowed, 300)
+    return allowed
+
 def list_available_packages_json(request):
     """Returns a JSON list of available packages with their versions"""
 
@@ -194,9 +216,11 @@ def list_available_packages_json(request):
     package_dict = {}
     icon_list = set(MunkiRepo.list('icons'))
     created_by = getattr(settings, 'PACKAGES_CREATED_BY', '')
+    if created_by:
+        allowed = packages_created_by(created_by)
 
     for item in catalog:
-        if created_by and item.get('_metadata', {}).get('created_by') != created_by:
+        if created_by and (item['name'], item['version']) not in allowed:
             continue
         package_name = item['name']
 

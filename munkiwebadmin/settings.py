@@ -241,12 +241,19 @@ LOGGING = {
             'handlers': ['console', 'file'],
             'propagate': False,
         },
+        # Azure health probes hit the internal IP; rejecting them is fine, logging it is noise
+        'django.security.DisallowedHost': {
+            'handlers': [],
+            'propagate': False,
+        },
         'django_auth_adfs': {
             'handlers': ['console'],
             'level': LOGLEVEL,
         },
     },
 }
+
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 
 CACHES = {
     "default": {
@@ -324,7 +331,7 @@ if CLIENT_SECRET:
         AUTHENTICATION_BACKENDS = AUTHENTICATION_BACKENDS + (AdfsAuthCodeBackend, AdfsAccessTokenBackend)
 
 LOGIN_URL='/login/'
-LOGIN_REDIRECT_URL = '/dasboard/'
+LOGIN_REDIRECT_URL = '/dashboard/'
 
 if ENTRA_ONLY:
     LOGIN_URL = "django_auth_adfs:login"
