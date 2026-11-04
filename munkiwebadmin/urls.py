@@ -9,7 +9,7 @@ from django.shortcuts import redirect
 from django.core.exceptions import ImproperlyConfigured
 
 from .views import dashboard
-from pkgsinfo.views import list_available_packages
+from pkgsinfo.views import list_available_packages, topology, topology_json
 
 from django.contrib import admin
 admin.autodiscover()
@@ -34,6 +34,8 @@ urlpatterns = [
     url(r'^manifests/', include('manifests.urls')),
     url(r'^catalogs/', include('catalogs.urls')),
     url(r'^pkgsinfo/', include('pkgsinfo.urls')),
+    url(r'^topology/$', topology, name='topology'),
+    url(r'^topology/_json$', topology_json, name='topology_json'),
     url(r'^icons/', include('icons.urls')),
     url(r'^santa/', include('santa.urls')),
     url(r'^makecatalogs/', include('process.urls')),

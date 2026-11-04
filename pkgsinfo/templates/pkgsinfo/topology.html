@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_style %}
+<link rel="stylesheet" href="{% get_static_prefix %}pkgsinfo/css/topology.css" type="text/css" media="all" />
+{% endblock extra_style %}
+
+{% block java_script %}
+<script type='text/javascript' src='{% get_static_prefix %}js/cytoscape.min.js'></script>
+<script type='text/javascript' src='{% get_static_prefix %}js/dagre.min.js'></script>
+<script type='text/javascript' src='{% get_static_prefix %}js/cytoscape-dagre.js'></script>
+<script type='text/javascript' src='{% get_static_prefix %}pkgsinfo/js/topology.js'></script>
+{% endblock java_script %}
+
+{% block page_title %}Topology{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-body topology-toolbar">
+    <div class="input-group topology-catalog">
+      <label class="input-group-text" for="topology-catalog">Catalog</label>
+      <select class="form-select" id="topology-catalog" data-selected="{{ catalog }}"></select>
+    </div>
+    <ul class="topology-legend list-unstyled" aria-label="Legend">
+      <li><span class="legend-line legend-requires"></span>Requires</li>
+      <li><span class="legend-line legend-update"></span>Update For</li>
+      <li><span class="legend-line legend-older"></span>Older Versions only</li>
+      <li><span class="legend-line legend-broken"></span>Pinned Version absent</li>
+      <li><span class="legend-node"></span>Missing Package</li>
+    </ul>
+  </div>
+</div>
+<div class="topology-body">
+  <div class="card topology-graph-card">
+    <div id="topology-message" class="topology-message" role="status" hidden></div>
+    <div id="topology-graph" aria-label="Graph of Packages and their relationships"></div>
+  </div>
+  <aside class="card topology-panel" id="topology-panel" hidden>
+    <div class="card-body">
+      <div class="topology-panel-header">
+        <img id="topology-panel-icon" alt="" hidden>
+        <div>
+          <h5 class="mb-0" id="topology-panel-name"></h5>
+          <small class="text-body-secondary" id="topology-panel-display-name"></small>
+        </div>
+        <button type="button" class="btn-close ms-auto" id="topology-panel-close" aria-label="Close"></button>
+      </div>
+      <div id="topology-panel-content"></div>
+      <a class="btn btn-secondary btn-sm mt-3" id="topology-panel-link" href="#">Open in Package Info</a>
+    </div>
+  </aside>
+</div>
+{% endblock content %}

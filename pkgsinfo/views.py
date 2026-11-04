@@ -4,7 +4,7 @@ pkgsinfo/views.py
 
 from django.http import HttpResponse, Http404
 from django.shortcuts import render
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, permission_required
 from django.conf import settings
 from django.http import JsonResponse
 from django.urls import reverse
@@ -12,6 +12,7 @@ from django.core.cache import cache
 from multiprocessing.pool import ThreadPool
 
 from pkgsinfo.models import Pkginfo, PKGSINFO_STATUS_TAG
+from pkgsinfo.topology import build_topology
 from process.models import Process
 from api.models import MunkiRepo, \
                        FileError, FileDoesNotExistError
@@ -287,3 +288,40 @@ def package_icon(request, icon_name):
 def list_available_packages(request):
     context = {'page': 'packages'}
     return render(request, 'pkgsinfo/package_list.html', context=context)
+
+
+def topology_response(catalog_name):
+    '''Returns the Topology of a catalog, plus the catalogs to choose from.
+    catalog_name comes from the URL, so only names the repo lists are read'''
+    catalogs = sorted(name for name in MunkiRepo.list('catalogs')
+                      if not name.startswith('.'))
+    response = {'catalog': catalog_name, 'catalogs': catalogs,
+                'catalog_found': False, 'nodes': [], 'edges': []}
+    if catalog_name not in catalogs:
+        return response
+    try:
+        topology = build_topology(MunkiRepo.read('catalogs', catalog_name))
+    except FileError as err:
+        LOGGER.error('Could not read catalog %s: %s', catalog_name, err)
+        return response
+    for node in topology['nodes']:
+        node['icon_url'] = get_icon_url(node)
+    response.update(topology, catalog_found=True)
+    return response
+
+
+@login_required
+@permission_required('pkgsinfo.view_pkginfofile', raise_exception=True)
+def topology(request):
+    '''The Topology page'''
+    context = {'page': 'topology',
+               'search': request.GET.get('package', ''),
+               'catalog': request.GET.get('catalog', 'all')}
+    return render(request, 'pkgsinfo/topology.html', context=context)
+
+
+@login_required
+@permission_required('pkgsinfo.view_pkginfofile', raise_exception=True)
+def topology_json(request):
+    '''The data drawn by the Topology page'''
+    return JsonResponse(topology_response(request.GET.get('catalog', 'all')))

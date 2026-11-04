@@ -225,6 +225,10 @@ function initPkginfoTable() {
      searchField.keyup(function(){
          thisTable.search($(this).val()).draw();
      });
+     // apply a search passed in the URL, such as from the Topology page
+     if (searchField.val()) {
+         thisTable.search(searchField.val()).draw();
+     }
 }
 
 function cancelEdit() {

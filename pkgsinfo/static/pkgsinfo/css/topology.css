@@ -1,0 +1,136 @@
+.topology-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1.5rem;
+}
+
+.topology-catalog {
+    width: auto;
+}
+
+.topology-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1.25rem;
+    margin: 0;
+    font-size: 0.875rem;
+}
+
+.topology-legend li {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.legend-line {
+    width: 24px;
+    border-top: 2px solid var(--bs-body-color);
+}
+
+.legend-update {
+    border-top: 2px dashed var(--bs-success);
+}
+
+.legend-older {
+    border-top-color: var(--bs-secondary-color);
+    opacity: 0.5;
+}
+
+.legend-broken {
+    border-top-color: var(--bs-danger);
+}
+
+.legend-node {
+    width: 18px;
+    height: 12px;
+    border: 2px dashed var(--bs-danger);
+    border-radius: 3px;
+}
+
+.topology-body {
+    display: flex;
+    gap: 0.75rem;
+    align-items: stretch;
+}
+
+.topology-graph-card {
+    position: relative;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+#topology-graph {
+    width: 100%;
+    height: calc(100vh - 235px);
+    min-height: 360px;
+}
+
+.topology-message {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    text-align: center;
+    color: var(--bs-secondary-color);
+}
+
+.topology-message[hidden] {
+    display: none;
+}
+
+.topology-panel {
+    flex: 0 0 340px;
+    height: calc(100vh - 235px);
+    min-height: 360px;
+    overflow-y: auto;
+}
+
+.topology-panel-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    margin-bottom: 0.75rem;
+    overflow-wrap: anywhere;
+}
+
+.topology-panel-header img {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+}
+
+.topology-panel h6 {
+    margin: 1rem 0 0.35rem;
+}
+
+.topology-panel ul {
+    margin: 0;
+    padding-left: 1.1rem;
+    overflow-wrap: anywhere;
+}
+
+.topology-version {
+    padding: 0.5rem 0;
+    border-top: 1px solid var(--bs-border-color);
+    font-size: 0.875rem;
+}
+
+.topology-version .badge {
+    margin-left: 0.25rem;
+}
+
+@media (max-width: 767.98px) {
+    .topology-body {
+        flex-direction: column;
+    }
+
+    .topology-panel {
+        flex-basis: auto;
+        height: auto;
+        min-height: 0;
+    }
+}

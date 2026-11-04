@@ -43,7 +43,7 @@
         
         {% block java_script %}{% endblock %}
 
-        <link rel="icon" href="{% get_static_prefix %}img/favicon.ico" sizes="16x16 32x32 64x64" type="image/vnd.microsoft.icon">
+        <link rel="icon" href="{% get_static_prefix %}img/favicon.png" type="image/png">
     </head>
     {% block body_tag %}
     <body>
@@ -103,6 +103,12 @@
                             <a href="{% url 'icons' %}" class="sidebar-link nav-link{% if page == 'icons' %} active{% endif %}">
                                 <i class="fas fa-image fa-fw"></i>
                                 Icons
+                            </a>
+                        </li>
+                        <li class="">
+                            <a href="{% url 'topology' %}" class="sidebar-link nav-link{% if page == 'topology' %} active{% endif %}">
+                                <i class="fa-solid fa-diagram-project fa-fw"></i>
+                                Topology
                             </a>
                         </li>
                         {% endif %}  
