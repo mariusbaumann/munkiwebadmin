@@ -25,14 +25,18 @@
         var key_list = options.keylist;
         var key_types = options.keytypes;
         var validator = options.validator
+        // keys offered by "Add list" inside a Conditional Item
+        var conditional_keys = options.conditionalkeys;
+        // which key titles the cards of an array, e.g. {installs: 'path'}
+        var card_titles = options.cardtitles || {};
 
         return this.each(function() {
-            PlistEditor($(this), obj, onchange, onpropertyclick, key_list, key_types, validator);
+            PlistEditor($(this), obj, onchange, onpropertyclick, key_list, key_types, validator, conditional_keys, card_titles);
         });
 
     };
 
-    function PlistEditor(target, obj, onchange, onpropertyclick, key_list, key_types, validator) {
+    function PlistEditor(target, obj, onchange, onpropertyclick, key_list, key_types, validator, conditional_keys, card_titles) {
         var opt = {
             target: target,
             onchange: onchange,
@@ -40,10 +44,18 @@
             key_list: key_list,
             key_types: key_types,
             validator: validator,
+            conditional_keys: conditional_keys,
+            card_titles: card_titles,
             original: obj,
         };
+        target.addClass('plist-root');
         construct(opt, obj, target, null);
+        resizeTextOnWidthChange(target);
     }
+
+    // Cards the user has collapsed. Keyed on the dict itself rather than its
+    // path, so the state follows a card through reordering and re-rendering.
+    var collapsedCards = new WeakSet();
 
     function isDate(o) {
         return Object.prototype.toString.call(o) == '[object Date]';
@@ -129,36 +141,394 @@
         return res;
     }
     
-    function expander() {
-        var _expander =   $('<span>',  { 'class': 'expander' });
-        _expander.bind('click', function() {
-            var item = $(this).parent();
-            item.toggleClass('expanded');
-        });
-        return _expander;
+    function lastPathItem(path) {
+        return path.split('.').pop();
     }
 
-    function itemAppender(handler) {
-        var appender = $('<div>', { 'class': 'item appender' }),
-           // btn     = $('<button />', { 'class': 'btn btn-success btn-xs' }),
-            //span    = $('<span>', { 'class': 'glyphicon glyphicon-plus' })
-            btn = $('<i>', { 'class': 'fa fa-plus-circle' })
-        //btn.text('Add New Value');
-        //btn.append(span);
+    function parentPath(path) {
+        return path.split('.').slice(0, -1).join('.');
+    }
+
+    function valueAt(opt, path) {
+        return path ? def(opt.original, path) : opt.original;
+    }
+
+    function isArrayItem(opt, path) {
+        return path !== '' && isArray(valueAt(opt, parentPath(path)));
+    }
+
+    function isConditionalItem(path, obj) {
+        return /(^|\.)conditional_items\.\d+$/.test(path) &&
+               (!obj.hasOwnProperty('condition') || isString(obj.condition));
+    }
+
+    // Does this value render as one or more cards once it has content?
+    function holdsCards(opt, val, path) {
+        if (isObject(val)) return true;
+        if (!isArray(val)) return false;
+        var defaultValue = get_default_value(path, opt.key_types);
+        return val.some(isObject) ||
+               (isArray(defaultValue) && isObject(defaultValue[0]));
+    }
+
+    // Would deleting this value take cards with content along with it?
+    function deletesCards(val) {
+        if (isObject(val)) return Object.keys(val).length > 0;
+        return isArray(val) && val.some(isObject);
+    }
+
+    // Grow each text value to fit. All heights are reset before any is read,
+    // so a long manifest only forces one layout.
+    function resizeText(container) {
+        var fields = container.find('textarea.value:visible').toArray();
+        fields.forEach(function(field) { field.style.height = 'auto'; });
+        var heights = fields.map(function(field) {
+            return field.scrollHeight + field.offsetHeight - field.clientHeight;
+        });
+        fields.forEach(function(field, i) {
+            field.style.height = heights[i] + 'px';
+        });
+    }
+
+    function scheduleResizeText(opt) {
+        if (opt.resize_pending) return;
+        opt.resize_pending = true;
+        setTimeout(function() {
+            opt.resize_pending = false;
+            resizeText(opt.target);
+        }, 0);
+    }
+
+    // Text wraps differently at a new width, and a hidden tab has no width
+    // until it is shown.
+    function resizeTextOnWidthChange(target) {
+        if (target.data('plist-resize-observer')) return;
+        var lastWidth = null;
+        var observer = new ResizeObserver(function(entries) {
+            var width = entries[0].contentRect.width;
+            if (width !== lastWidth) {
+                lastWidth = width;
+                resizeText(target);
+            }
+        });
+        observer.observe(target[0]);
+        target.data('plist-resize-observer', observer);
+    }
+
+    function resizeOneField() {
+        resizeText($(this).parent());
+    }
+
+    function addButton(label, handler) {
+        var appender = $('<div>', {'class': 'plist-add'}),
+            btn = $('<button>', {'type': 'button',
+                                 'class': 'btn btn-primary btn-sm'});
+        btn.append($('<i>', {'class': 'fa fa-plus', 'aria-hidden': 'true'}));
+        btn.append(document.createTextNode(' ' + label));
         btn.click(handler);
         appender.append(btn);
         return appender;
     }
 
-    function rowControls(opt) {
-        var _rowControls = $('<td>', 
-                             {'class': 'row-controls', 'width': '20px'}),
-            del_btn = $('<i>',
-                        {'class': 'row_del_btn fa fa-minus-circle'});
+    function deleteButton(opt, iconClass, label) {
+        var btn = $('<button>', {'type': 'button',
+                                 'class': 'row_del_btn btn btn-sm plist-icon-btn',
+                                 'aria-label': label,
+                                 'title': label});
+        btn.append($('<i>', {'class': 'fa ' + iconClass, 'aria-hidden': 'true'}));
+        btn.click(confirmDeleteOfCards(opt));
+        return btn;
+    }
 
-        _rowControls.append(del_btn);
-        del_btn.click(deleteRow(opt));
+    // Deleting cards with content takes a second click, as there is no undo
+    // short of discarding every unsaved edit.
+    function confirmDeleteOfCards(opt) {
+        var remove = deleteRow(opt);
+        return function() {
+            var btn = $(this),
+                path = btn.closest('[data-bs-path]').data('bs-path');
+            if (!deletesCards(valueAt(opt, path)) || btn.hasClass('plist-armed')) {
+                remove.call(this);
+                return;
+            }
+            var icon = btn.children().detach();
+            btn.addClass('plist-armed btn-danger').text('Delete?');
+            setTimeout(function() {
+                btn.removeClass('plist-armed btn-danger').empty().append(icon);
+            }, 3000);
+        };
+    }
+
+    function rowControls(opt, iconClass, label) {
+        var _rowControls = $('<td>', {'class': 'row-controls'});
+        _rowControls.append(deleteButton(opt, iconClass, label));
         return _rowControls;
+    }
+
+    function refreshCardHeader(element) {
+        var refresh = element.closest('.plist-card').data('refreshHeader');
+        if (refresh) refresh();
+    }
+
+    function focusAdded(root, path, onKey) {
+        var row = root.find('[data-bs-path]').filter(function() {
+            return this.getAttribute('data-bs-path') === path;
+        }).first();
+        var field = onKey ? row.find('.property').first() :
+            row.find('textarea.value, input.value, select.value')
+               .not('[type=checkbox]').first();
+        if (!field.length) return;
+        field[0].scrollIntoView({block: 'nearest'});
+        field.focus().select();
+    }
+
+    function keyAdder(opt, obj, root, path, isConditional) {
+        var label = isConditional ? 'Add list' : 'Add key',
+            childPath = function(key) { return (path ? path + '.' : '') + key; },
+            choices = null;
+        if (isConditional) {
+            choices = opt.conditional_keys;
+        } else if (!path && opt.key_types) {
+            choices = Object.keys(opt.key_types).sort(function(a, b) {
+                return a.localeCompare(b);
+            });
+        }
+        function added(key, onKey) {
+            construct(opt, obj, root, path);
+            opt.onchange(opt.original);
+            focusAdded(root, childPath(key), onKey);
+        }
+        function addNamed(key) {
+            obj[key] = get_default_value(childPath(key), opt.key_types);
+            added(key, false);
+        }
+        function addOther() {
+            added(addNewValue(obj), true);
+        }
+        if (!choices) {
+            return addButton(label, addOther);
+        }
+        return keyPicker(label, choices.filter(function(key) {
+            return !obj.hasOwnProperty(key);
+        }), function(key) {
+            addNamed(key);
+        }, function(typed) {
+            if (typed && !obj.hasOwnProperty(typed)) {
+                addNamed(typed);
+            } else {
+                addOther();
+            }
+        });
+    }
+
+    // A button opening a searchable menu of keys. "Other" stays available
+    // whatever the search, and takes what was typed as the new key's name.
+    function keyPicker(label, keys, onPick, onOther) {
+        var appender = $('<div>', {'class': 'plist-add dropdown'}),
+            btn = $('<button>', {'type': 'button',
+                                 'class': 'btn btn-primary btn-sm dropdown-toggle',
+                                 'data-bs-toggle': 'dropdown',
+                                 'aria-expanded': 'false'}),
+            menu = $('<div>', {'class': 'dropdown-menu plist-key-menu'}),
+            search = $('<input>', {'type': 'search',
+                                   'class': 'form-control form-control-sm',
+                                   'placeholder': 'Search keys…',
+                                   'aria-label': 'Search keys'}).attr('autocomplete', 'off'),
+            list = $('<div>', {'class': 'plist-key-list'}),
+            other = $('<button>', {'type': 'button', 'class': 'dropdown-item'}),
+            items = keys.map(function(key) {
+                return $('<button>', {'type': 'button', 'class': 'dropdown-item'})
+                    .text(key).data('key', key);
+            }),
+            dropdown;
+
+        function typed() {
+            return search.val().trim();
+        }
+
+        // what Enter would add: an exact match, else the first one shown
+        function target() {
+            var text = typed().toLowerCase(),
+                shown = items.filter(function(item) {
+                    return !item.hasClass('d-none');
+                }),
+                exact = shown.filter(function(item) {
+                    return item.data('key').toLowerCase() === text;
+                });
+            return exact[0] || shown[0] || other;
+        }
+
+        function filter() {
+            var text = typed().toLowerCase();
+            items.forEach(function(item) {
+                item.toggleClass('d-none',
+                    item.data('key').toLowerCase().indexOf(text) == -1);
+            });
+            other.text(typed() ? 'Other: "' + typed() + '"' : 'Other…');
+            list.find('.dropdown-item').removeClass('active');
+            if (text) target().addClass('active');
+        }
+
+        items.forEach(function(item) {
+            list.append(item);
+            item.click(function() {
+                dropdown.hide();
+                onPick(item.data('key'));
+            });
+        });
+        other.click(function() {
+            var text = typed();
+            dropdown.hide();
+            onOther(text);
+        });
+        list.append(other);
+
+        search.on('input', filter);
+        search.on('keydown', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                target().click();
+            } else if (event.key === 'ArrowDown') {
+                event.preventDefault();
+                list.find('.dropdown-item:not(.d-none)').first().focus();
+            }
+        });
+
+        btn.append($('<i>', {'class': 'fa fa-plus', 'aria-hidden': 'true'}));
+        btn.append(document.createTextNode(' ' + label));
+        menu.append($('<div>', {'class': 'plist-key-search'}).append(search), list);
+        appender.append(btn, menu);
+
+        // fixed, so that the card frames around it can't clip the menu
+        dropdown = new bootstrap.Dropdown(btn[0], {popperConfig: {strategy: 'fixed'}});
+        btn.on('shown.bs.dropdown', function() {
+            search.focus();
+        });
+        btn.on('hidden.bs.dropdown', function() {
+            search.val('');
+            filter();
+        });
+        filter();
+        return appender;
+    }
+
+    function cardTitle(opt, obj, path) {
+        var titleKey = opt.card_titles[lastPathItem(parentPath(path))],
+            title = titleKey ? obj[titleKey] : null;
+        return (isString(title) && title) ||
+               '#' + (parseInt(lastPathItem(path), 10) + 1);
+    }
+
+    function cardSummary(obj, isConditional) {
+        var keys = Object.keys(obj);
+        if (!isConditional) {
+            return keys.length + (keys.length == 1 ? ' key' : ' keys');
+        }
+        return keys.filter(function(key) {
+            return key != 'condition';
+        }).map(function(key) {
+            return isArray(obj[key]) ? obj[key].length + ' ' + key : key;
+        }).join(', ');
+    }
+
+    function conditionField(opt, obj, path) {
+        var conditionPath = path + '.condition',
+            field = $('<div>', {'class': 'plist-condition',
+                                'data-bs-path': conditionPath,
+                                'data-bs-type': 'string'}),
+            textarea = $('<textarea>', {'class': 'value form-control',
+                                        'rows': 1,
+                                        'aria-label': 'Condition'}),
+            feedback = $('<div>', {'class': 'invalid-feedback'})
+                .text('This Conditional Item has no Condition.');
+        function markIfMissing() {
+            textarea.toggleClass('is-invalid', !textarea.val().trim());
+        }
+        textarea.val(obj.condition || '');
+        markIfMissing();
+        textarea.on('input', resizeOneField).on('input', markIfMissing);
+        textarea.change(valueChanged(opt));
+        return field.append(textarea, feedback);
+    }
+
+    function collapseToggle(collapsed, onToggle) {
+        var toggle = $('<button>', {'type': 'button',
+                                    'class': 'btn btn-sm plist-icon-btn plist-card-toggle',
+                                    'aria-label': 'Collapse or expand',
+                                    'aria-expanded': String(!collapsed)});
+        toggle.append($('<i>', {'class': 'fa fa-chevron-down', 'aria-hidden': 'true'}));
+        toggle.click(function() {
+            var nowCollapsed = onToggle();
+            toggle.attr('aria-expanded', String(!nowCollapsed));
+        });
+        return toggle;
+    }
+
+    function sectionSummary(val) {
+        if (isArray(val)) {
+            return val.length + (val.length == 1 ? ' entry' : ' entries');
+        }
+        return cardSummary(val, false);
+    }
+
+    // A key holding cards or a dict is itself a card: the row is the frame and
+    // its key cell the header. Looks up the value when toggled, as reordering
+    // replaces the array and renaming changes the row's path.
+    function makeSection(opt, tableRow, rowHeader, val) {
+        var summary = $('<span>', {'class': 'plist-card-summary'}),
+            collapsed = collapsedCards.has(val);
+        tableRow.addClass('plist-section').toggleClass('collapsed', collapsed);
+        summary.text(sectionSummary(val));
+        rowHeader.prepend(collapseToggle(collapsed, function() {
+            var current = valueAt(opt, tableRow.data('bs-path')),
+                nowCollapsed = tableRow.toggleClass('collapsed').hasClass('collapsed');
+            if (nowCollapsed) collapsedCards.add(current); else collapsedCards.delete(current);
+            summary.text(sectionSummary(current));
+            if (!nowCollapsed) resizeText(tableRow);
+            return nowCollapsed;
+        }));
+        rowHeader.append(summary);
+    }
+
+    function buildCard(opt, obj, path, isConditional, content, adder) {
+        var card = $('<div>', {'class': 'plist-card'}),
+            header = $('<div>', {'class': 'plist-card-header'}),
+            body = $('<div>', {'class': 'plist-card-body'}),
+            collapsed = collapsedCards.has(obj),
+            title = $('<span>', {'class': 'plist-card-title'}),
+            summary = $('<span>', {'class': 'plist-card-summary'}),
+            toggle = collapseToggle(collapsed, function() {
+                var nowCollapsed = card.toggleClass('collapsed').hasClass('collapsed');
+                if (nowCollapsed) collapsedCards.add(obj); else collapsedCards.delete(obj);
+                if (!nowCollapsed) resizeText(card);
+                return nowCollapsed;
+            });
+
+        card.toggleClass('collapsed', collapsed);
+        card.toggleClass('plist-card-conditional', isConditional);
+
+        header.append($('<i>', {'class': 'grabber fa fa-bars',
+                                'aria-hidden': 'true'}));
+        header.append(toggle);
+        if (isConditional) {
+            header.append($('<span>', {'class': 'badge text-bg-primary plist-if'}).text('IF'));
+            header.append(conditionField(opt, obj, path));
+        } else {
+            header.append(title);
+        }
+        header.append(summary);
+        header.append(deleteButton(opt, 'fa-trash',
+            isConditional ? 'Delete Conditional Item' : 'Delete'));
+
+        function refresh() {
+            title.text(cardTitle(opt, obj, path));
+            summary.text(cardSummary(obj, isConditional));
+        }
+        refresh();
+        card.data('refreshHeader', refresh);
+
+        body.append(content, adder);
+        return card.append(header, body);
     }
 
     function addNewValue(obj, default_value) {
@@ -168,7 +538,7 @@
         }
         if (isArray(obj)) {
             obj.push(new_value);
-            return true;
+            return obj.length - 1;
         }
 
         if (isObject(obj)) {
@@ -180,10 +550,10 @@
             }
 
             obj[newName] = new_value;
-            return true;
+            return newName;
         }
 
-        return false;
+        return null;
     }
 
     function clone(obj) {
@@ -235,28 +605,16 @@
         return defaultValue;
     }
 
-    function set_focus_on_text(root) {
-        var tablerows = $(root).find('tr');
-        if (tablerows) {
-            var td = $(tablerows[tablerows.length - 1]).children('td[data-bs-type="string"]');
-            if (td) {
-                textarea = td.children('textarea');
-                if (textarea) {
-                    textarea[0].focus();
-                    textarea[0].select();
-                }
-            }
-        }
-    }
-
     function construct(opt, obj, root, path) {
         path = path || '';
-        //alert(path);
         root.children().remove();
+        scheduleResizeText(opt);
         var objType = getType(obj);
         if (objType == 'dict') {
-            var table = $('<table>',
-                          {"class": "table table-condensed"}),
+            // a dict under a key is framed by its row; see makeSection
+            var isCard = isArrayItem(opt, path),
+                isConditional = isCard && isConditionalItem(path, obj),
+                table = $('<table>', {"class": "table table-sm plist-table"}),
                 tableBody = $('<tbody>', {'class': 'dict'});
             if (opt.key_list) {
                 var keys = Object.keys(opt.key_list);
@@ -265,12 +623,15 @@
             }
             for (var i = 0; i < keys.length; i++) {
                 var key = keys[i];
+                // a Conditional Item's Condition is its card's heading
+                if (isConditional && key == 'condition') continue;
                 if (obj.hasOwnProperty(key)) {
                     var dataPath = (path ? path + '.' : '') + key;
+                    var isSection = holdsCards(opt, obj[key], dataPath);
+                    var isStacked = isSection || (isArray(obj[key]) && path !== '');
                     var tableRow = $('<tr>', {'data-bs-path': dataPath});
-                    var rowHeader = $('<th>',
-                                      {'scope': 'row',
-                                       'class': 'col-xs-3 col-sm-3 col-md-3 col-lg-3'});
+                    tableRow.toggleClass('plist-stacked', isStacked);
+                    var rowHeader = $('<th>', {'scope': 'row'});
                     if (!opt.key_list) {
                         var keyElement = $('<input>',
                             {'class': 'property form-control'});
@@ -282,6 +643,7 @@
                         keyElement.val(key).attr('title', key);
                     }
                     rowHeader.append(keyElement);
+                    if (isSection) makeSection(opt, tableRow, rowHeader, obj[key]);
                     var rowValue = $('<td>',
                                      {'data-bs-type': getType(obj[key])});
                     construct(opt, obj[key], rowValue, dataPath);
@@ -289,58 +651,60 @@
                     if (!opt.key_list) {
                        // only show delete control if we aren't showing the
                        // special/important keys
-                       tableRow.append(rowControls(opt));
+                       tableRow.append(isObject(obj[key]) || isArray(obj[key]) ?
+                           rowControls(opt, 'fa-trash', 'Delete ' + key) :
+                           rowControls(opt, 'fa-xmark', 'Delete ' + key));
                     }
                     tableBody.append(tableRow);
                 }
             }
             table.append(tableBody);
-            if (root != opt.target) {
-                root.append(expander());
-            }
-            root.append(table);
-            if (!opt.key_list) {
-                root.append(itemAppender(function() {
-                    addNewValue(obj);
-                    construct(opt, obj, root, path);
-                    opt.onchange(opt.original);
-                }));
+            var adder = opt.key_list ? null :
+                keyAdder(opt, obj, root, path, isConditional);
+            if (isCard) {
+                root.append(buildCard(opt, obj, path, isConditional, table, adder));
+            } else {
+                root.append(table, adder);
             }
         } else if (objType == 'array') {
             // array
-            var table = $('<table>',
-                          {"class": "table table-condensed"}),
+            var table = $('<table>', {"class": "table table-sm plist-table"}),
                 tableBody = $('<tbody>', {'class': 'array'});
             for (var i=0; i<obj.length; ++i) {
                 var dataPath = (path ? path + '.' : '') + i;
+                var isCardRow = isObject(obj[i]);
                 var tableRow = $('<tr>', {'data-bs-path': dataPath});
-                var rowHeader = $('<th>',
-                                  {'scope': 'row'});
-                var grabber = $('<i>',
-                                {'class': 'grabber fa fa-bars',
-                                 'aria-hidden': 'true'});
-                var rowValue = $('<td>', 
-                                 {'data-bs-type': getType(obj[i]), 
-                                  'width': '100%'});
+                tableRow.toggleClass('plist-card-row', isCardRow);
+                var rowValue = $('<td>',
+                                 {'data-bs-type': getType(obj[i])});
                 construct(opt, obj[i], rowValue, dataPath);
-                rowHeader.append(grabber);
-                tableRow.append(rowHeader);
-                tableRow.append(rowValue);
-                tableRow.append(rowControls(opt));
+                if (isCardRow) {
+                    // a card carries its own drag handle and delete button
+                    tableRow.append(rowValue);
+                } else {
+                    var rowHeader = $('<th>', {'scope': 'row'});
+                    rowHeader.append($('<i>', {'class': 'grabber fa fa-bars',
+                                               'aria-hidden': 'true'}));
+                    tableRow.append(rowHeader, rowValue,
+                                    rowControls(opt, 'fa-xmark', 'Delete item'));
+                }
                 tableBody.append(tableRow);
             }
             // make array elements re-orderable
             tableBody.sortable({
                 items: '> tr',
+                handle: '.grabber',
+                axis: 'y',
                 start: function(event, ui) {
                     // store the value for the object that is moving
                     // so we still have it if the object is dragged
                     // to a different array
                     var val = def(opt.original, ui.item.data('bs-path'));
                     ui.item.data('value', val);
+                    // an absolutely positioned row would shrink to its content
+                    ui.helper.width(ui.item.parent().width());
                     // Some tweaks for the drop placeholder
                     ui.placeholder.height(ui.helper.outerHeight()-10);
-                    ui.placeholder.find("td").css("width", ui.helper.width());
                 },
                 update: function( event, ui ) {
                     var newArray = [],
@@ -359,20 +723,26 @@
                         path = parentTableRow.data('bs-path');
                     feed(opt.original, path, newArray);
                     construct(opt, newArray, valueElement, path);
+                    refreshCardHeader(valueElement);
                     opt.onchange(opt.original);
                 }
             });
             table.append(tableBody);
-            root.append(expander());
-            root.addClass('expanded');
             root.append(table);
             var defaultValue = get_default_value(path, opt.key_types);
             if (isArray(defaultValue)) defaultValue = defaultValue[0];
-            root.append(itemAppender(function() {
-                    addNewValue(obj, defaultValue);
+            var addLabel = 'Add item';
+            if (lastPathItem(path) == 'conditional_items') {
+                addLabel = 'Add Conditional Item';
+            } else if (holdsCards(opt, obj, path)) {
+                addLabel = 'Add entry';
+            }
+            root.append(addButton(addLabel, function() {
+                    var index = addNewValue(obj, defaultValue);
                     construct(opt, obj, root, path);
+                    refreshCardHeader(root);
                     opt.onchange(opt.original);
-                    set_focus_on_text(root);
+                    focusAdded(root, (path ? path + '.' : '') + index, false);
             }));
         } else if (objType == 'null') {
             valueElement = typeSelect();
@@ -388,6 +758,7 @@
             valueElement = $('<textarea>', 
                             {'class': 'value form-control', 'rows': rows});
             valueElement.val(obj);
+            valueElement.on('input', resizeOneField);
             root.append(valueElement);
             if (opt.validator) {
                 var extraClass = opt.validator(path, obj);
@@ -451,7 +822,9 @@
                 prevPath = $(tableRow).data('bs-path'),
                 newKey = $(this).val(),
                 oldKey = $(this).attr('title'),
-                val = def(opt.original, prevPath, null);
+                val = def(opt.original, prevPath, null),
+                hadNoValue = (val == null),
+                valueHost = $(tableRow).parent();
 
             // store the new key
             $(this).attr('title', newKey);
@@ -480,38 +853,42 @@
                 //th is $(this).parent(); next item is td (value)
                 var valueElement = $(this).parent().next();
                 valueElement.attr('data-bs-type', getType(val));
-                construct(opt, val, valueElement, newPath);
+                if (hadNoValue && (isArray(val) || isObject(val))) {
+                    // the row's layout depends on what its value holds
+                    renderParent(opt, tableRow, newPath);
+                } else {
+                    construct(opt, val, valueElement, newPath);
+                }
             } else {
                 $(tableRow).remove();
             }
+            refreshCardHeader(valueHost);
             opt.onchange(opt.original);
         };
     }
 
+    // Rebuild the container a row lives in, for when the row's own layout or
+    // the paths of its siblings have changed.
+    function renderParent(opt, tableRow, path) {
+        var container = tableRow.parent().closest('td[data-bs-type], .plist-root'),
+            containerPath = parentPath(path);
+        construct(opt, valueAt(opt, containerPath), container, containerPath);
+    }
+
     function deleteRow(opt){
         return function() {
-            //parent is <td>; its parent is <tr>
-            var tableRow = $(this).closest('tr'),
-                path = $(tableRow).data('bs-path');
+            var tableRow = $(this).closest('[data-bs-path]'),
+                path = $(tableRow).data('bs-path'),
+                card = $(tableRow).closest('.plist-card');
             // remove oldKey and value
             stringify(feed(opt.original, path));
             if ($(tableRow).closest('tbody').hasClass('array')) {
-                // with an array, we need to reconstruct the rows
-                // since the <tr> paths are now wrong
-                // unless we deleted the last row
-                var nextRow = $(tableRow).next('tr');
-                while ($(nextRow).data('bs-path')) {
-                    path = $(nextRow).data('bs-path');
-                    var pathElements = path.split('.'),
-                        lastElement = pathElements.pop();
-                    pathElements.push(lastElement-1);
-                    path = pathElements.join('.');
-                    $(nextRow).data('bs-path', path);
-                    $(nextRow).attr('data-bs-path', path);
-                    nextRow = $(nextRow).next('tr');
-                }
+                // the paths of the rows after this one are now wrong
+                renderParent(opt, tableRow, path);
+            } else {
+                $(tableRow).remove();
             }
-            $(tableRow).remove();
+            refreshCardHeader(card);
             opt.onchange(opt.original);
         };
     }
@@ -548,7 +925,7 @@
     function valueChanged(opt) {
         return function() {
             var val = null,
-                tableRow = $(this).closest('tr'),
+                tableRow = $(this).closest('[data-bs-path]'),
                 path = $(tableRow).data('bs-path');
 
             if ($(this).is('select')) {
@@ -563,6 +940,13 @@
                         type = 'date';
                         val = new Date(timestamp);
                     }
+                }
+                if (type == 'dict' || type == 'array') {
+                    // the row's layout depends on what its value holds
+                    feed(opt.original, path, val);
+                    renderParent(opt, tableRow, path);
+                    opt.onchange(opt.original);
+                    return;
                 }
                 var parent = $(this).parent();
                 parent.data('bs-type', type);
@@ -585,6 +969,7 @@
                 if (extraClass) $(this).parent().addClass(extraClass);
             }
             feed(opt.original, path, val);
+            refreshCardHeader(tableRow);
             opt.onchange(opt.original);
         };
     }

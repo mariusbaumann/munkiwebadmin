@@ -191,6 +191,7 @@ var key_list = {'catalogs': 'Catalogs',
 var keys_and_types = {'catalogs': ['catalogname'],
                       'conditional_items': [{'condition': 'os_vers_minor > 9',
                                              'managed_installs': ['itemname']}],
+                      'default_installs': ['itemname'],
                       'included_manifests': ['manifestname'],
                       'featured_items': ['itemname'],
                       'managed_installs': ['itemname'],
@@ -333,6 +334,12 @@ function constructDetail() {
         $('#detail').plistEditor(js_obj,
             { change: updatePlistAndBasics,
                 keytypes: keys_and_types,
+                conditionalkeys: ['included_manifests',
+                                  'managed_installs',
+                                  'managed_uninstalls',
+                                  'managed_updates',
+                                  'optional_installs',
+                                  'conditional_items'],
                 validator: validator});
     } else {
         $('#detail').html('<br/>Invalid plist.')
@@ -344,7 +351,8 @@ function constructDetail() {
 function addIncludedManifestLinks(editor) {
     rows = $(editor).find("tr[data-bs-path='included_manifests']");
     $(rows).each(function() {
-        var row_controls = $(this).find('.row-controls');
+        // the items' controls, not the delete control of the list itself
+        var row_controls = $(this).find('.row-controls').not($(this).children('.row-controls'));
         $(row_controls).each(function() {
             var tableRow = $(this).closest('tr'),
                 manifest_path = $(tableRow).find('.value').val();

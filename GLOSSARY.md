@@ -28,6 +28,16 @@ _Avoid_: Patch of, child of
 A Package named in a Requires or Update For relationship that has no Version in the selected catalog.
 _Avoid_: Broken package, orphan
 
+### Manifests
+
+**Conditional Item**:
+A Condition paired with the lists of Packages that apply to a client when that Condition is true.
+_Avoid_: Conditional block, rule
+
+**Condition**:
+The predicate a client evaluates to decide whether a Conditional Item applies to it.
+_Avoid_: Rule, filter
+
 ### Topology
 
 **Topology**:
