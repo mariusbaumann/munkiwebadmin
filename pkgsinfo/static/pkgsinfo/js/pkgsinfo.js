@@ -350,7 +350,7 @@ function getPkginfoItem(pathname) {
             //detectUnsavedChanges();
             current_pathname = pathname;
             requested_pathname = "";
-            $('#editortabs a[href="' + selected_tab_viewname + '"]').tab('show');
+            $(selected_tab_viewname).tab('show');
             setupView(selected_tab_viewname);
             do_resize();
             window.history.replaceState({'pkginfo_detail': data}, pkginfoItemURL, '/pkgsinfo/');
