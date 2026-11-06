@@ -256,7 +256,7 @@
         var objType = getType(obj);
         if (objType == 'dict') {
             var table = $('<table>',
-                          {"class": "table table-striped table-condensed"}),
+                          {"class": "table table-condensed"}),
                 tableBody = $('<tbody>', {'class': 'dict'});
             if (opt.key_list) {
                 var keys = Object.keys(opt.key_list);
@@ -309,7 +309,7 @@
         } else if (objType == 'array') {
             // array
             var table = $('<table>',
-                          {"class": "table table-striped table-condensed"}),
+                          {"class": "table table-condensed"}),
                 tableBody = $('<tbody>', {'class': 'array'});
             for (var i=0; i<obj.length; ++i) {
                 var dataPath = (path ? path + '.' : '') + i;
