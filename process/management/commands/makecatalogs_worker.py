@@ -19,6 +19,9 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         interval = getattr(settings, 'MAKECATALOGS_INTERVAL', 300)
         LOGGER.info('makecatalogs worker started, interval %ss', interval)
+        # the DB may have been reset (Azure keeps SQLite outside /home), losing
+        # Stale Catalogs from before the restart: assume stale, run on first tick
+        makecatalogs.mark_stale()
         next_tick = time.monotonic() + interval
         while True:
             close_old_connections()
