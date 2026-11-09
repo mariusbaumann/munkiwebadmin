@@ -235,6 +235,10 @@ LOGGING = {
             'class': 'logging.StreamHandler',
             'formatter': 'simple'
         },
+        # an empty handler list falls back to logging.lastResort (stderr)
+        'null': {
+            'class': 'logging.NullHandler',
+        },
         'file': {
             'class':'logging.handlers.RotatingFileHandler',
             'filename': 'munkiwebadmin.log',
@@ -256,7 +260,7 @@ LOGGING = {
         },
         # Azure health probes hit the internal IP; rejecting them is fine, logging it is noise
         'django.security.DisallowedHost': {
-            'handlers': [],
+            'handlers': ['null'],
             'propagate': False,
         },
         'django_auth_adfs': {
