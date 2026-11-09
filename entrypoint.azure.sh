@@ -10,4 +10,7 @@ python manage.py migrate
 
 python manage.py collectstatic --noinput
 
+# background Makecatalogs worker (docs/adr/0001)
+(while true; do python manage.py makecatalogs_worker; sleep 5; done) &
+
 gunicorn --bind=0.0.0.0 --timeout 600 --workers=4 munkiwebadmin.wsgi

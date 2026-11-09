@@ -14,4 +14,7 @@ fi
 # python manage.py flush --no-input
 python manage.py migrate
 
+# background Makecatalogs worker (docs/adr/0001)
+(while true; do python manage.py makecatalogs_worker; sleep 5; done) &
+
 exec "$@"

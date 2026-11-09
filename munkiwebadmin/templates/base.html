@@ -133,6 +133,17 @@
                     <div class="navbar-collapse">
                         <ul class="navbar-nav">
                             {% if user.is_authenticated %}
+                            <li class="nav-item dropdown d-none me-2" id="makecatalogsStatus">
+                                <button class="btn btn-sm text-nowrap" id="makecatalogsBadge" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i id="makecatalogsBadgeIcon"></i>
+                                    <span id="makecatalogsBadgeLabel" class="d-none d-md-inline"></span>
+                                </button>
+                                <div class="dropdown-menu dropdown-menu-end p-3" style="min-width: 18rem; max-width: 28rem;">
+                                    <p class="mb-2 small" id="makecatalogsText"></p>
+                                    <pre class="small text-danger mb-2 d-none" id="makecatalogsError" style="white-space: pre-wrap;"></pre>
+                                    <a href="#" class="btn btn-sm btn-primary" id="makecatalogsNow" onclick="requestMakecatalogs(); return false;">Makecatalogs now</a>
+                                </div>
+                            </li>
                             <li class="nav-item dropdown">
                                 <button class="btn" id="activeUsersBadge" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                                     <i class="fa-solid fa-user-clock"></i>
@@ -206,6 +217,7 @@
         </div>
         <script type="module" src="{% get_static_prefix %}js/color-modes.js"></script>
         <script type='text/javascript' src="{% get_static_prefix %}js/munkiwebadmin.js"></script>
+        <script type='text/javascript' src="{% get_static_prefix %}js/makecatalogs.js"></script>
         <script>
             document.addEventListener("DOMContentLoaded", function () {
                 function updateLogo() {

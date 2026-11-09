@@ -67,6 +67,16 @@ class FileAlreadyExistsError(FileError):
     pass
 
 
+# kinds whose changes make the catalogs stale (icons: makecatalogs hashes them)
+CATALOG_KINDS = ('pkgsinfo', 'icons')
+
+
+def _changed(kind):
+    if kind in CATALOG_KINDS:
+        from process.makecatalogs import mark_stale
+        mark_stale()
+
+
 class MunkiRepo(object):
     '''Pseudo-Django object'''
     @classmethod
@@ -99,6 +109,7 @@ class MunkiRepo(object):
         try:
             repo.put(kind + '/' + pathname, writePlistToString(data))
             LOGGER.info('Wrote %s/%s', kind, pathname)
+            _changed(kind)
         except munkirepo.RepoError as err:
             LOGGER.error('Write failed for %s/%s: %s', kind, pathname, err)
             raise FileWriteError(err)
@@ -109,6 +120,7 @@ class MunkiRepo(object):
         try:
             repo.put(kind + '/' + pathname, data)
             LOGGER.info('Wrote %s/%s', kind, pathname)
+            _changed(kind)
         except munkirepo.RepoError as err:
             LOGGER.error('Write failed for %s/%s: %s', kind, pathname, err)
             raise FileWriteError(err)
@@ -119,15 +131,17 @@ class MunkiRepo(object):
         try:
             repo.delete(kind + '/' + pathname)
             LOGGER.info('Deleted %s/%s', kind, pathname)
+            _changed(kind)
         except munkirepo.RepoError as err:
             LOGGER.error('Delete failed for %s/%s: %s', kind, pathname, err)
             raise FileDeleteError(err)
     
     @classmethod
     def makecatalogs(cls, output_fn=None):
-        '''Calls makecatalogs'''
+        '''Calls makecatalogs, returns its list of errors and warnings.
+        Use process.makecatalogs.run() instead, which holds the lock.'''
         try:
-            makecatalogslib.makecatalogs(repo, {}, output_fn=output_fn)
+            return makecatalogslib.makecatalogs(repo, {}, output_fn=output_fn)
         except makecatalogslib.MakeCatalogsError as err:
             LOGGER.error('makecatalogs failed: %s', err)
             raise FileError(err)

@@ -535,26 +535,12 @@ function getDevelopers() {
     return [];
 }
 
-function rebuildCatalogs() {
-    $('#process_progress_title_text').text('Rebuilding catalogs...')
-    $('#process_progress_status_text').text('Processing...')
-    $('#process_progress').modal('show');
-    poll_loop = setInterval(function() {
-            update_status('/makecatalogs/status');
-        }, 1000);
-    $.ajax({
-        type: 'POST',
-        url: '/makecatalogs/run',
-        data: '',
-        dataType: 'json',
-        global: false,
-        complete: function(jqXHR, textStatus) {
-            window.clearInterval(poll_loop);
-            $('#process_progress').modal('hide');
-            $('#list_items').DataTable().ajax.reload();
-        },
-    });
-}
+// catalogs are rebuilt by the background worker; reload once it's done
+$(document).on('makecatalogs:done', function() {
+    if ($.fn.DataTable.isDataTable('#list_items')) {
+        $('#list_items').DataTable().ajax.reload(null, false);
+    }
+});
 
 
 function monitor_pkgsinfo_list() {
@@ -577,7 +563,7 @@ function savePkginfoItem(closeAfterSave=false) {
         timeout: 10000,
         success: function(data) {
             hideSaveOrCancelBtns();
-            rebuildCatalogs();
+            refreshMakecatalogsStatus();
             if (closeAfterSave == false) {
                 getPkginfoItem(current_pathname);
                 $('.modal-backdrop').remove();
@@ -656,7 +642,7 @@ function massEditCatalogs() {
                               'catalogs_to_add': catalogs_to_add,
                               'catalogs_to_delete': catalogs_to_delete}),
         success: function(data) {
-            rebuildCatalogs();
+            refreshMakecatalogsStatus();
             window.location.hash = '';
             $('#pkginfo_item_detail').html('');
         },
@@ -688,7 +674,7 @@ function deletePkginfoList() {
         data: JSON.stringify({'pkginfo_list': pkginfo_list,
                               'deletePkg': deletePkg}),
         success: function(data) {
-            rebuildCatalogs();
+            refreshMakecatalogsStatus();
             window.location.hash = '';
             $('#pkginfo_item_detail').html('');
         },
@@ -752,7 +738,7 @@ function deletePkginfoItem() {
             if (delete_pkg) {
                 deleteInstallerItem(installer_item_path);
             }
-            rebuildCatalogs();
+            refreshMakecatalogsStatus();
             window.location.hash = '';
             $('#pkginfo_item_detail').html('');
         },
@@ -855,8 +841,7 @@ function uploadPackage() {
                 // clear status message
                 uploadAlertContainer.innerHTML = "";
                 
-                // rebuild catalog
-                rebuildCatalogs();
+                refreshMakecatalogsStatus();
 
                 // redirect to the new pkginfo item
                 window.location.href = `/pkgsinfo/#${pkginfoPath}`;

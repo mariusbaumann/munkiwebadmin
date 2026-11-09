@@ -31,6 +31,9 @@ echo "Starting $NAME as `whoami`"
 
 export DJANGO_SETTINGS_MODULE=$DJANGO_SETTINGS_MODULE
 
+# background Makecatalogs worker (docs/adr/0001)
+(while true; do python manage.py makecatalogs_worker; sleep 5; done) &
+
 # Start your Django Unicorn
 gunicorn munkiwebadmin.wsgi:application \
   --name $NAME \

@@ -25,6 +25,8 @@ CSRF_COOKIE_HTTPONLY = False
 
 # Munki repo settings
 MUNKI_REPO_URL = os.getenv('MUNKI_REPO_URL', 'file:///munkirepo')
+# seconds between Makecatalogs runs for Stale Catalogs (see docs/adr/0001)
+MAKECATALOGS_INTERVAL = int(os.getenv('MAKECATALOGS_INTERVAL', '300'))
 if MUNKI_REPO_URL.startswith('file://'):
     if not os.path.exists(MUNKI_REPO_URL[7:]):
         MUNKI_REPO_URL = os.path.join('file:///' + BASE_DIR, 'munkirepo')

@@ -14,6 +14,16 @@ _Avoid_: App, item, software
 One specific release of a Package, described by a single pkginfo file.
 _Avoid_: Pkginfo, item
 
+### Catalogs
+
+**Makecatalogs**:
+Regenerating every catalog from the current Versions in the repo, so Munki clients see the changes. The name is Munki's own term for it.
+_Avoid_: Catalog rebuild, rebuild, sync
+
+**Stale Catalog**:
+A catalog that no longer matches the Versions in the repo because a Version was created, changed or deleted after the last Makecatalogs.
+_Avoid_: Dirty catalog, outdated catalog
+
 ### Relationships
 
 **Requires**:

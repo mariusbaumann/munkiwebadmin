@@ -100,27 +100,6 @@ function cancelEdit() {
 }
 
 
-function rebuildCatalogs() {
-    $('#process_progress_title_text').text('Rebuilding catalogs...')
-    $('#process_progress_status_text').text('Processing...')
-    $('#process_progress').modal('show');
-    poll_loop = setInterval(function() {
-            update_status('/makecatalogs/status');
-        }, 1000);
-    $.ajax({
-        type: 'POST',
-        url: '/makecatalogs/run',
-        data: '',
-        dataType: 'json',
-        global: false,
-        complete: function(jqXHR, textStatus){
-            window.clearInterval(poll_loop);
-            $('#process_progress').modal('hide');
-            $('#list_items').DataTable().ajax.reload();
-        },
-    });
-}
-
 function monitor_icon_list() {
     $('#process_progress_title_text').text('Getting icons...')
     $('#process_progress_status_text').text('Processing...')
@@ -143,7 +122,7 @@ function deleteIconItem() {
         type: 'DELETE',
         url: iconItemURL,
         success: function(data) {
-            rebuildCatalogs();
+            refreshMakecatalogsStatus();
             window.location.hash = '';
             $('#iconItem').modal("hide");
         },
@@ -202,7 +181,7 @@ function uploadIcon() {
         timeout: 10000,
         processData: false,
         success: function(data) {
-            rebuildCatalogs();
+            refreshMakecatalogsStatus();
             $("#newIconModal").modal("hide");
             $("#previewImg").prop("src", "/static/img/imgPlaceholder.png");
             $("#new-icon-name").val("");
