@@ -172,16 +172,27 @@ elif os.getenv('DB') == 'mysql':
         }
     }
 else:
+    # On Azure App Service only /home survives a restart; the app directory
+    # is unpacked fresh on every boot, which would wipe the database
+    if os.getenv('WEBSITE_SITE_NAME'):
+        _default_sqlite = '/home/data/munkiwebadmin/db.sqlite3'
+    else:
+        _default_sqlite = os.path.join(BASE_DIR, "db.sqlite3")
     DATABASES = {
         "default": {
             "ENGINE": os.environ.get("SQL_ENGINE", "django.db.backends.sqlite3"),
-            "NAME": os.environ.get("SQL_DATABASE", os.path.join(BASE_DIR, "db.sqlite3")),
+            "NAME": os.environ.get("SQL_DATABASE", _default_sqlite),
             "USER": os.environ.get("SQL_USER", "user"),
             "PASSWORD": os.environ.get("SQL_PASSWORD", "password"),
             "HOST": os.environ.get("SQL_HOST", "localhost"),
             "PORT": os.environ.get("SQL_PORT", "5432"),
         }
     }
+    if DATABASES["default"]["ENGINE"].endswith("sqlite3"):
+        # gunicorn workers and the Makecatalogs worker share the file:
+        # wait for a lock instead of failing with "database is locked"
+        DATABASES["default"]["OPTIONS"] = {"timeout": 20}
+        os.makedirs(os.path.dirname(DATABASES["default"]["NAME"]), exist_ok=True)
 
 AUTH_PASSWORD_VALIDATORS = [ {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
