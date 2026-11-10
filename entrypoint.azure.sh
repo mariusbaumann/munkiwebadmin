@@ -9,8 +9,9 @@ python manage.py migrate
 # collectstatic already runs during the Oryx build
 
 # 7z is only needed for package uploads (munkiimport_linux), so install it
-# in the background instead of delaying startup
-(apt-get update -qq && apt-get install -y -qq p7zip-full) &
+# in the background instead of delaying startup. 7zip (7zz) also reads APFS
+# disk images; it's missing from older Debian releases, hence the fallback.
+(apt-get update -qq && apt-get install -y -qq p7zip-full && (apt-get install -y -qq 7zip || true)) &
 
 # background Makecatalogs worker (docs/adr/0001); started after gunicorn has
 # booted so the two don't compete during startup

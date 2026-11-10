@@ -315,34 +315,81 @@ def diskImageIsMounted(dmgpath):
     return False
 
 
+# 7zz (7-Zip 22+) also reads APFS disk images; p7zip's 7z only HFS+
+SEVENZIP = shutil.which("7zz") or shutil.which("7z")
+
+# extracted volume root -> the directory to remove afterwards
+_EXTRACTED_DMGS = {}
+
+
+def _has_installer_item(path):
+    """Does path hold a package or an application at its top level?"""
+    for name in listdir(path):
+        itempath = os.path.join(path, name)
+        if hasValidInstallerItemExt(itempath) or isApplication(itempath):
+            return True
+    return False
+
+
+def _volume_root(extracted):
+    """Finds the directory matching the root of the mounted disk image.
+
+    7z puts a disk image's files in a folder named after its volume (e.g.
+    UTM/UTM.app), and may leave a partition packed as a file (e.g. 4.hfs),
+    while Munki expects the items at the root, as on a mounted volume."""
+    for name in listdir(extracted):
+        partition = os.path.join(extracted, name)
+        if (os.path.isfile(partition) and
+                os.path.splitext(name)[1].lower() in ('.hfs', '.hfsx', '.apfs')):
+            subprocess.run([SEVENZIP, "x", partition, f"-o{extracted}", "-y"],
+                           stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            os.remove(partition)
+    if _has_installer_item(extracted):
+        return extracted
+    for name in sorted(listdir(extracted)):
+        volume = os.path.join(extracted, name)
+        if (not name.startswith('.') and os.path.isdir(volume) and
+                not os.path.islink(volume) and _has_installer_item(volume)):
+            return volume
+    return extracted
+
+
 def mountdmg(dmgpath, mountpoint=None):
-    """Extracts a DMG file on Linux using 7z instead of mounting."""
+    """Extracts a DMG file on Linux using 7z instead of mounting.
+
+    Returns the directory matching the root of the mounted volume."""
     if not mountpoint:
-        mountpoint = os.path.join(tempfile.gettempdir(), "mnt_" + os.path.splitext(os.path.basename(dmgpath))[0])
-    
+        mountpoint = tempfile.mkdtemp(
+            prefix="mnt_" + os.path.splitext(os.path.basename(dmgpath))[0] + "_")
+
     # create mountpoint if it doesn't exist
     os.makedirs(mountpoint, exist_ok=True)
 
     # check if 7z is installed
-    if not shutil.which("7z"):
-        print("Error: `7z` is not installed. Install it with `apt install p7zip-full`.", file=sys.stderr)
+    if not SEVENZIP:
+        print("Error: `7z` is not installed. Install it with `apt install 7zip` "
+              "or `apt install p7zip-full`.", file=sys.stderr)
         return ""
 
     # extract the DMG file
-    extract_cmd = ["7z", "x", dmgpath, f"-o{mountpoint}", "-y"]
+    extract_cmd = [SEVENZIP, "x", dmgpath, f"-o{mountpoint}", "-y"]
     proc = subprocess.run(extract_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     if proc.returncode != 0:
         print(f"Error extracting {dmgpath}: {proc.stderr.decode('utf-8')}", file=sys.stderr)
+        shutil.rmtree(mountpoint, ignore_errors=True)
         return ""
 
-    print(f"DMG extracted to {mountpoint}")
-    return mountpoint
+    root = _volume_root(mountpoint)
+    _EXTRACTED_DMGS[root] = mountpoint
+    print(f"DMG extracted to {root}")
+    return root
 
 
 def unmountdmg(dmgpath, mountpoint):
     """Cleans up extracted DMG files using 7z."""
-    
+    mountpoint = _EXTRACTED_DMGS.pop(mountpoint, mountpoint)
+
     if not os.path.exists(mountpoint):
         print(f"Warning: {mountpoint} does not exist.", file=sys.stderr)
         return
@@ -548,7 +595,7 @@ def get_catalog_info_from_dmg(dmgpath, options):
 
     print("Mounted %s at %s" % (dmgpath, mountpoints))
     if options.pkgname:
-        pkgpath = os.path.join(mountpoints[0], options.pkgname)
+        pkgpath = os.path.join(mountpoints, options.pkgname)
         cataloginfo = get_catalog_info_from_path(pkgpath, options)
         if cataloginfo:
             cataloginfo['package_path'] = options.pkgname

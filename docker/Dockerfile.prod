@@ -59,7 +59,8 @@ WORKDIR $APP_HOME
 COPY . $APP_HOME
 
 # install dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends nginx fuse3 libfuse3-dev
+# 7zip unpacks uploaded disk images and packages (api/utils/munkiimport_linux.py)
+RUN apt-get update && apt-get install -y --no-install-recommends nginx fuse3 libfuse3-dev 7zip
 COPY --from=builder /usr/src/app/wheels /wheels
 RUN pip install --upgrade pip
 RUN pip install --no-cache /wheels/*
