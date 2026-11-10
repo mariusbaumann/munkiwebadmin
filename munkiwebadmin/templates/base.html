@@ -52,7 +52,7 @@
             {% block main_menu %}
             <aside id="sidebar">
                 <!-- ======== Content For Sidebar ========-->
-                <div class="h-100">
+                <div class="h-100 d-flex flex-column">
                     <div class="sidebar-logo">
                         <a class="navbar-brand" href="/">
                             <span>
@@ -114,6 +114,9 @@
                         {% endif %}  
                         {% endif %}
                     </ul>
+                    <div class="sidebar-version mt-auto" title="{{APPNAME}} {{APP_VERSION}}{% if APP_COMMIT %} ({{APP_COMMIT}}){% endif %}">
+                        v{{APP_VERSION}}{% if APP_COMMIT %} · {{APP_COMMIT}}{% endif %}
+                    </div>
                 </div>
             </aside>
             {% endblock %}

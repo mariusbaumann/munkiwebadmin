@@ -297,6 +297,20 @@ var validator = function(path, val) {
     return null;
 };
 
+// names offered while typing in the Detail and Basic editors
+var suggest = function(path) {
+    var path_items = path.split('.'),
+        list_key = path_items[path_items.length - 2];
+    if (['managed_installs', 'managed_uninstalls', 'managed_updates',
+         'optional_installs', 'featured_items'].indexOf(list_key) != -1) {
+        return getValidInstallItems();
+    }
+    if (list_key == 'included_manifests') {
+        return $('#data_storage').data('manifest_names') || [];
+    }
+    return null;
+};
+
 function setupHelpers() {
 
 }
@@ -320,6 +334,7 @@ function constructBasics() {
             { change: updatePlistAndDetail,
               keylist: key_list,
               keytypes: keys_and_types,
+              suggest: suggest,
               validator: validator});
     } else {
         $('#basics').html('<br/>Invalid plist.')
@@ -340,7 +355,8 @@ function constructDetail() {
                                   'managed_updates',
                                   'optional_installs',
                                   'conditional_items'],
-                validator: validator});
+                suggest: suggest,
+              validator: validator});
     } else {
         $('#detail').html('<br/>Invalid plist.')
     }

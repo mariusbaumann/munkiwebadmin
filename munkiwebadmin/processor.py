@@ -4,6 +4,8 @@ import base64
 from django.apps import apps
 import logging
 
+from munkiwebadmin.version import VERSION, COMMIT
+
 logger = logging.getLogger(__name__)
 
 # get settings
@@ -68,5 +70,7 @@ def index(request):
         'ENTRA_ONLY': ENTRA_ONLY,
         'TENANT_ID': TENANT_ID,
         'APPNAME': APPNAME,
+        'APP_VERSION': VERSION,
+        'APP_COMMIT': COMMIT,
         'userImage': imgString
     }

@@ -31,14 +31,16 @@
         var card_titles = options.cardtitles || {};
         // show values with more than one entry as collapsed cards
         var collapse_values = !!options.collapsevalues;
+        // suggest(path) returns the names to offer for a string, or null
+        var suggest = options.suggest || null;
 
         return this.each(function() {
-            PlistEditor($(this), obj, onchange, onpropertyclick, key_list, key_types, validator, conditional_keys, card_titles, collapse_values);
+            PlistEditor($(this), obj, onchange, onpropertyclick, key_list, key_types, validator, conditional_keys, card_titles, collapse_values, suggest);
         });
 
     };
 
-    function PlistEditor(target, obj, onchange, onpropertyclick, key_list, key_types, validator, conditional_keys, card_titles, collapse_values) {
+    function PlistEditor(target, obj, onchange, onpropertyclick, key_list, key_types, validator, conditional_keys, card_titles, collapse_values, suggest) {
         var opt = {
             target: target,
             onchange: onchange,
@@ -49,6 +51,7 @@
             conditional_keys: conditional_keys,
             card_titles: card_titles,
             collapse_values: collapse_values,
+            suggest: suggest,
             original: obj,
         };
         target.addClass('plist-root');
@@ -275,6 +278,62 @@
             // once the row is in the page, so Ace can measure it
             setTimeout(init, 0);
         }
+    }
+
+    // Best matches first: names starting with the text, then shorter names
+    // (so "Firefox" comes before "Firefox-120.0").
+    function rankSuggestions(names, text) {
+        var needle = text.trim().toLowerCase();
+        return names.filter(function(name) {
+            return name.toLowerCase().indexOf(needle) != -1;
+        }).sort(function(a, b) {
+            var aStarts = a.toLowerCase().indexOf(needle) == 0,
+                bStarts = b.toLowerCase().indexOf(needle) == 0;
+            if (aStarts != bStarts) return aStarts ? -1 : 1;
+            return a.length - b.length || a.localeCompare(b);
+        }).slice(0, 50);
+    }
+
+    // Autocomplete for a string whose path asks for names, e.g. an item of
+    // managed_installs. Asks for the names on each search, as the catalog
+    // data arrives after the editor is built and rows can move.
+    function addSuggestions(opt, field, path) {
+        if (!opt.suggest || !opt.suggest(path) || !$.fn.autocomplete) return;
+        function currentPath() {
+            return field.closest('[data-bs-path]').attr('data-bs-path') || path;
+        }
+        field.autocomplete({
+            minLength: 0,
+            delay: 0,
+            classes: {'ui-autocomplete': 'plist-suggestions'},
+            source: function(request, response) {
+                response(rankSuggestions(opt.suggest(currentPath()) || [],
+                                         request.term));
+            },
+            focus: function() { return false; },
+            select: function(event, ui) {
+                field.val(ui.item.value).trigger('change');
+                return false;
+            }
+        });
+        field.autocomplete('instance')._renderItem = function(ul, item) {
+            var text = item.value,
+                at = text.toLowerCase().indexOf(field.val().trim().toLowerCase()),
+                length = field.val().trim().length,
+                label = $('<div>');
+            if (length && at != -1) {
+                label.append(document.createTextNode(text.slice(0, at)),
+                             $('<mark>').text(text.slice(at, at + length)),
+                             document.createTextNode(text.slice(at + length)));
+            } else {
+                label.text(text);
+            }
+            return $('<li>').append(label).appendTo(ul);
+        };
+        // show the choices as soon as the field is entered
+        field.on('focus', function() {
+            field.autocomplete('search', field.val());
+        });
     }
 
     function expandScripts(card) {
@@ -912,6 +971,7 @@
             valueElement.val(obj);
             valueElement.on('input', resizeOneField);
             root.append(valueElement);
+            addSuggestions(opt, valueElement, path);
             if (opt.validator) {
                 var extraClass = opt.validator(path, obj);
                 if (extraClass) root.addClass(extraClass);

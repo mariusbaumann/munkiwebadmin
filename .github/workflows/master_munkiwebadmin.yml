@@ -41,6 +41,9 @@ jobs:
 
       
 
+      - name: Record commit for the version shown in the sidebar
+        run: git rev-parse --short HEAD > COMMIT
+
       - name: Zip artifact for deployment
         run: zip release.zip ./* -r
 

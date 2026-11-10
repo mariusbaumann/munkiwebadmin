@@ -258,6 +258,7 @@ function constructBasics() {
               keylist: key_list,
               keytypes: keys_and_types,
               collapsevalues: true,
+              suggest: suggest,
               validator: validator});
     } else {
         $('#basics').html('<br/>Invalid plist.')
@@ -275,6 +276,7 @@ function constructDetail() {
                            'receipts': 'packageid',
                            'installer_choices_xml': 'choiceIdentifier'},
               collapsevalues: true,
+              suggest: suggest,
               validator: validator});
     } else {
         $('#detail').html('<br/>Invalid plist.')
@@ -507,6 +509,16 @@ var keys_and_types = {'additional_startosinstall_options': [''],
                       'update_for': ['itemname'],
                       'version': '1.0',
                       'version_script': '#!/bin/sh\nexit 0'};
+
+// names offered while typing in the Detail and Basic editors
+var suggest = function(path) {
+    var path_items = path.split('.'),
+        list_key = path_items[path_items.length - 2];
+    if (list_key == 'requires' || list_key == 'update_for') {
+        return getValidInstallItems();
+    }
+    return null;
+};
 
 var validator = function(path, val) {
     var path_items = path.split('.');

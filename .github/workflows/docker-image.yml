@@ -18,6 +18,9 @@ jobs:
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_PASSWORD }}
       -
+        name: Record commit for the version shown in the sidebar
+        run: git rev-parse --short HEAD > COMMIT
+      -
         name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       -
