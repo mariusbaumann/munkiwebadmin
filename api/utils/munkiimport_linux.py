@@ -315,8 +315,11 @@ def diskImageIsMounted(dmgpath):
     return False
 
 
-# 7zz (7-Zip 22+) also reads APFS disk images; p7zip's 7z only HFS+
-SEVENZIP = shutil.which("7zz") or shutil.which("7z")
+def sevenzip():
+    """7zz (7-Zip 22+) also reads APFS disk images; p7zip's 7z only HFS+.
+    Looked up on each use: on Azure, 7z is installed in the background
+    after the app has started."""
+    return shutil.which("7zz") or shutil.which("7z")
 
 # extracted volume root -> the directory to remove afterwards
 _EXTRACTED_DMGS = {}
@@ -341,7 +344,7 @@ def _volume_root(extracted):
         partition = os.path.join(extracted, name)
         if (os.path.isfile(partition) and
                 os.path.splitext(name)[1].lower() in ('.hfs', '.hfsx', '.apfs')):
-            subprocess.run([SEVENZIP, "x", partition, f"-o{extracted}", "-y"],
+            subprocess.run([sevenzip(), "x", partition, f"-o{extracted}", "-y"],
                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             os.remove(partition)
     if _has_installer_item(extracted):
@@ -366,13 +369,13 @@ def mountdmg(dmgpath, mountpoint=None):
     os.makedirs(mountpoint, exist_ok=True)
 
     # check if 7z is installed
-    if not SEVENZIP:
+    if not sevenzip():
         print("Error: `7z` is not installed. Install it with `apt install 7zip` "
               "or `apt install p7zip-full`.", file=sys.stderr)
         return ""
 
     # extract the DMG file
-    extract_cmd = [SEVENZIP, "x", dmgpath, f"-o{mountpoint}", "-y"]
+    extract_cmd = [sevenzip(), "x", dmgpath, f"-o{mountpoint}", "-y"]
     proc = subprocess.run(extract_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     if proc.returncode != 0:
