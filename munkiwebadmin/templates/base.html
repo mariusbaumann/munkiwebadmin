@@ -204,10 +204,9 @@
                 <!-- ========= Main content section ======= -->
                 <main class="content py-2">
                     <div class="container-fluid">
-                        <div class="row">
-                            <div class="col-12">
-                                <h4 class="mb-2 text-body">{% block page_title %}{% endblock %}</h4>
-                            </div>
+                        <div class="page-header">
+                            <h4 class="mb-0 text-body">{% block page_title %}{% endblock %}</h4>
+                            <div class="page-actions">{% block page_actions %}{% endblock %}</div>
                         </div>
                         <div class="row">
                             <div class="col-12">

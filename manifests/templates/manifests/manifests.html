@@ -21,26 +21,18 @@
 
 {% block page_title %}Manifests <span class="badge bg-secondary" id="item-count-badge">0</span>{% endblock %}
 
-{% block content %}
-<div class="row">
-  <div class="col-12">
-    <div class="card">
-      <div class="card-body">
-        <div class="btn-toolbar justify-content-between" role="toolbar" aria-label="Toolbar with button groups">
-          <div class="btn-group" role="group" aria-label="First group">
-            <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#searchManifestModal">
-              Search manifests
-            </button>
-            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#newManifestModal">
-              New manifest
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div> <!-- /row -->
+{% block page_actions %}
+<div class="btn-toolbar gap-2" role="toolbar" aria-label="Manifest actions">
+  <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#searchManifestModal">
+    Search manifests
+  </button>
+  <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#newManifestModal">
+    New manifest
+  </button>
+</div>
+{% endblock page_actions %}
 
+{% block content %}
 <div class="row">
   <div class="col-12">
     <div class="card">

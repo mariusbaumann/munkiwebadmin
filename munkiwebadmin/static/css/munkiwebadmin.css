@@ -112,6 +112,20 @@ a.sidebar-link {
     margin-left: calc(-1 * var(--sidebar-size));
 }
 
+/* page title, with the page's buttons on the right */
+.page-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: .5rem 1rem;
+    margin-bottom: .5rem;
+}
+
+.page-actions:empty {
+    display: none;
+}
+
 /* content style */
 .content {
     flex: 1;
@@ -158,9 +172,25 @@ a.sidebar-link {
     padding: .2rem 0;
 }
 
-.plist-root .plist-table > tbody > tr > .table-warning,
 .plist-root .plist-table > tbody > tr > .table-danger {
     padding: .2rem;
+}
+
+/* a value the validator doesn't accept: a warning icon beside the field */
+.plist-root .plist-invalid {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+}
+
+.plist-root .plist-invalid > .value {
+    flex: 1;
+    min-width: 0;
+}
+
+.plist-root .plist-invalid-icon {
+    color: var(--bs-warning);
+    cursor: help;
 }
 
 /* a value with more than one entry is a collapsible card in the value column */
@@ -308,14 +338,6 @@ a.sidebar-link {
     border-radius: var(--bs-border-radius);
     background-color: var(--bs-body-bg);
     margin-bottom: .75rem;
-}
-
-.plist-card-conditional {
-    border-left: 3px solid var(--bs-primary);
-}
-
-.plist-card-conditional .plist-card-conditional {
-    border-left-width: 5px;
 }
 
 .plist-card-header {

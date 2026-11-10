@@ -19,47 +19,36 @@
 
 {% block page_title %}Package Info <span class="badge bg-secondary" id="item-count-badge">0</span>{% endblock %}
 
-{% block content %}
-<div class="row">
-  <div class="col-12">
-    <div class="card">
-      <div class="card-body">
-        <div class="btn-toolbar justify-content-between" role="toolbar" aria-label="Toolbar with button groups">
-          <div class="btn-group" role="group" aria-label="First group">
-            <div class="btn-group" role="group">
-              <button type="button" id="catalog_dropdown" class="btn btn-secondary dropdown-toggle" data-value="{{catalog}}" data-bs-toggle="dropdown" aria-expanded="false">
-                {{catalog}}
-              </button>
-              <ul class="dropdown-menu" id="catalog_dropdown_list">
-                <li><a class="dropdown-item" href="#">all</a></li>
-              </ul>
-            </div>
-            <button type="button" id="makecatalogs" class="btn btn-primary" onClick="requestMakecatalogs()">Makecatalogs</button>
-            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#uploadModal">Upload Package 
-              <span class="position-absolute top-0 start-100 translate-middle badge bg-danger">
-                Beta
-                <span class="visually-hidden">Beta</span>
-              </span>
-            </button>
-          </div>
-          
-          <div class="input-group">
-            <div class="btn-group" role="group">
-              <button type="button" id="massaction_dropdown" class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                <i class="fa fa-cog" aria-hidden="true"></i>
-              </button>
-              <ul class="dropdown-menu" id="massaction_dropdown_list">
-                <li><a href="#" class="dropdown-item disabled" id="mass_delete">Delete items…</a></li>
-                <li><a href="#" class="dropdown-item disabled" id="mass_edit_catalogs">Edit catalogs…</a></li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+{% block page_actions %}
+<div class="btn-toolbar gap-2" role="toolbar" aria-label="Package Info actions">
+  <div class="btn-group" role="group">
+    <button type="button" id="catalog_dropdown" class="btn btn-secondary dropdown-toggle" data-value="{{catalog}}" data-bs-toggle="dropdown" aria-expanded="false">
+      {{catalog}}
+    </button>
+    <ul class="dropdown-menu dropdown-menu-end" id="catalog_dropdown_list">
+      <li><a class="dropdown-item" href="#">all</a></li>
+    </ul>
   </div>
-</div> <!-- /row -->
+  <button type="button" id="makecatalogs" class="btn btn-primary" onClick="requestMakecatalogs()">Makecatalogs</button>
+  <button type="button" class="btn btn-success position-relative" data-bs-toggle="modal" data-bs-target="#uploadModal">Upload Package
+    <span class="position-absolute top-0 start-100 translate-middle badge bg-danger">
+      Beta
+      <span class="visually-hidden">Beta</span>
+    </span>
+  </button>
+  <div class="btn-group" role="group">
+    <button type="button" id="massaction_dropdown" class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Actions for selected items">
+      <i class="fa fa-cog" aria-hidden="true"></i>
+    </button>
+    <ul class="dropdown-menu dropdown-menu-end" id="massaction_dropdown_list">
+      <li><a href="#" class="dropdown-item disabled" id="mass_delete">Delete items…</a></li>
+      <li><a href="#" class="dropdown-item disabled" id="mass_edit_catalogs">Edit catalogs…</a></li>
+    </ul>
+  </div>
+</div>
+{% endblock page_actions %}
 
+{% block content %}
 <div class="row">
   <div class="col-12">
     <div class="card">

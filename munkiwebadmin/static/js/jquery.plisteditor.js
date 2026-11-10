@@ -336,6 +336,24 @@
         });
     }
 
+    // The validator returns a message for a value it doesn't accept, e.g.
+    // "Package doesn't exist", shown as a warning icon next to the field.
+    function showValidation(opt, cell, path, val) {
+        cell.children('.plist-invalid-icon').each(function() {
+            var tooltip = window.bootstrap && bootstrap.Tooltip.getInstance(this);
+            if (tooltip) tooltip.dispose();
+        }).remove();
+        cell.removeClass('plist-invalid');
+        var message = opt.validator ? opt.validator(path, val) : null;
+        if (!message) return;
+        var icon = $('<i>', {'class': 'fa-solid fa-triangle-exclamation plist-invalid-icon',
+                             'role': 'img',
+                             'aria-label': message,
+                             'title': message});
+        cell.addClass('plist-invalid').append(icon);
+        if (window.bootstrap && bootstrap.Tooltip) new bootstrap.Tooltip(icon[0]);
+    }
+
     function expandScripts(card) {
         card.find('.plist-script').trigger('plist:expand');
     }
@@ -972,10 +990,7 @@
             valueElement.on('input', resizeOneField);
             root.append(valueElement);
             addSuggestions(opt, valueElement, path);
-            if (opt.validator) {
-                var extraClass = opt.validator(path, obj);
-                if (extraClass) root.addClass(extraClass);
-            }
+            showValidation(opt, root, path, obj);
             valueElement.change(valueChanged(opt));
         } else {
             valueElement = $('<input>', 
@@ -1185,13 +1200,7 @@
             } else {
                 val = getValue($(this));
             }
-            if (opt.validator) {
-                // this is a cheat and ties us to Bootstrap 3 contextual classes
-                $(this).parent().removeClass('table-success table-info table-warning table-danger');
-                console.log(path, val)
-                var extraClass = opt.validator(path, val);
-                if (extraClass) $(this).parent().addClass(extraClass);
-            }
+            showValidation(opt, $(this).parent(), path, val);
             feed(opt.original, path, val);
             refreshCardHeader(tableRow);
             opt.onchange(opt.original);

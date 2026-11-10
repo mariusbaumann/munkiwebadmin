@@ -270,18 +270,18 @@ function getValidInstallItems() {
 }
 
 var validator = function(path, val) {
-    // returns a bootstrap class name to highlight items that aren't 'valid'
+    // returns a message for items that aren't valid, shown as a warning icon
     var path_items = path.split('.');
     if (path_items.indexOf('catalogs') != -1) {
         //check val against valid catalog names
         var data = $('#data_storage').data('catalog_data');
-        var catalog_names = Object.keys(data);
-        if (catalog_names && catalog_names.indexOf(val) == -1) return 'table-warning';
+        var catalog_names = data ? Object.keys(data) : [];
+        if (catalog_names.length && catalog_names.indexOf(val) == -1) return "Catalog doesn't exist";
     }
     if (path_items.indexOf('included_manifests') != -1) {
         //check val against valid manifest names
         var manifest_names = $('#data_storage').data('manifest_names');
-        if (manifest_names && manifest_names.indexOf(val) == -1) return 'table-warning';
+        if (manifest_names && manifest_names.indexOf(val) == -1) return "Manifest doesn't exist";
     }
     if (path_items.indexOf('featured_items') != -1 ||
         path_items.indexOf('managed_installs') != -1 ||
@@ -291,7 +291,7 @@ var validator = function(path, val) {
             //check val against valid install items
             var valid_names = getValidInstallItems();
             if (valid_names.length && valid_names.indexOf(val) == -1) {
-                return 'table-warning';
+                return "Package doesn't exist";
             }
     }
     return null;

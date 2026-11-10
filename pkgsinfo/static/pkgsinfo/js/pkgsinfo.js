@@ -527,7 +527,7 @@ var validator = function(path, val) {
             //check val against valid install items
             var valid_names = getValidInstallItems();
             if (valid_names.length && valid_names.indexOf(val) == -1) {
-                return 'danger';
+                return "Package doesn't exist";
         }
     }
     return null;
