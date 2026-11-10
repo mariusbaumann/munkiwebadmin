@@ -8,7 +8,7 @@
 
     var LOOK = {
         stale:   {cls: 'btn-outline-warning', icon: 'fa-solid fa-triangle-exclamation',
-                  label: 'Catalogs stale',
+                  label: 'Makecatalogs pending',
                   text: 'Changes are not applied to the catalogs yet. ' +
                         'They are applied automatically within %m minutes.'},
         queued:  {cls: 'btn-outline-secondary', icon: 'fa-solid fa-spinner fa-spin',

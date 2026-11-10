@@ -257,6 +257,7 @@ function constructBasics() {
             { change: updatePlistAndDetail,
               keylist: key_list,
               keytypes: keys_and_types,
+              collapsevalues: true,
               validator: validator});
     } else {
         $('#basics').html('<br/>Invalid plist.')
@@ -273,6 +274,7 @@ function constructDetail() {
                            'items_to_copy': 'destination_path',
                            'receipts': 'packageid',
                            'installer_choices_xml': 'choiceIdentifier'},
+              collapsevalues: true,
               validator: validator});
     } else {
         $('#detail').html('<br/>Invalid plist.')

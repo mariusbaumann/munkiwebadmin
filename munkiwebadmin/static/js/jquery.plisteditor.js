@@ -29,14 +29,16 @@
         var conditional_keys = options.conditionalkeys;
         // which key titles the cards of an array, e.g. {installs: 'path'}
         var card_titles = options.cardtitles || {};
+        // show values with more than one entry as collapsed cards
+        var collapse_values = !!options.collapsevalues;
 
         return this.each(function() {
-            PlistEditor($(this), obj, onchange, onpropertyclick, key_list, key_types, validator, conditional_keys, card_titles);
+            PlistEditor($(this), obj, onchange, onpropertyclick, key_list, key_types, validator, conditional_keys, card_titles, collapse_values);
         });
 
     };
 
-    function PlistEditor(target, obj, onchange, onpropertyclick, key_list, key_types, validator, conditional_keys, card_titles) {
+    function PlistEditor(target, obj, onchange, onpropertyclick, key_list, key_types, validator, conditional_keys, card_titles, collapse_values) {
         var opt = {
             target: target,
             onchange: onchange,
@@ -46,6 +48,7 @@
             validator: validator,
             conditional_keys: conditional_keys,
             card_titles: card_titles,
+            collapse_values: collapse_values,
             original: obj,
         };
         target.addClass('plist-root');
@@ -56,6 +59,22 @@
     // Cards the user has collapsed. Keyed on the dict itself rather than its
     // path, so the state follows a card through reordering and re-rendering.
     var collapsedCards = new WeakSet();
+    // Value cards start collapsed, so track the ones the user has expanded.
+    // Scripts are strings, which a WeakSet can't hold, so those go by path.
+    var expandedValues = new WeakSet();
+    var expandedPaths = new Set();
+
+    function isExpanded(val, path) {
+        return isString(val) ? expandedPaths.has(path) : expandedValues.has(val);
+    }
+
+    function setExpanded(val, path, expanded) {
+        if (isString(val)) {
+            if (expanded) expandedPaths.add(path); else expandedPaths.delete(path);
+        } else if (isObject(val) || isArray(val)) {
+            if (expanded) expandedValues.add(val); else expandedValues.delete(val);
+        }
+    }
 
     function isDate(o) {
         return Object.prototype.toString.call(o) == '[object Date]';
@@ -188,6 +207,85 @@
         fields.forEach(function(field, i) {
             field.style.height = heights[i] + 'px';
         });
+        container.find('.plist-script').each(function() {
+            var editor = $(this).data('editor');
+            if (editor) editor.resize();
+        });
+    }
+
+    function isScript(path, val) {
+        return isString(val) && !!path &&
+               (/_script$/.test(lastPathItem(path)) || val.slice(0, 2) == '#!');
+    }
+
+    var SCRIPT_MODES = [[/python/, 'python'], [/perl/, 'perl'],
+                        [/ruby/, 'ruby'], [/osascript/, 'applescript']];
+
+    // highlighting follows the shebang; Munki scripts are shell by default
+    function scriptMode(text) {
+        var shebang = text.split('\n')[0];
+        if (shebang.slice(0, 2) == '#!') {
+            for (var i = 0; i < SCRIPT_MODES.length; i++) {
+                if (SCRIPT_MODES[i][0].test(shebang)) {
+                    return 'ace/mode/' + SCRIPT_MODES[i][1];
+                }
+            }
+        }
+        return 'ace/mode/sh';
+    }
+
+    // An Ace editor with line numbers and highlighting, like the Plist tab.
+    // Created when first shown, as a long pkginfo may hold many scripts.
+    function scriptEditor(opt, root, text) {
+        var host = $('<div>', {'class': 'plist-script'});
+        root.append(host);
+        function init() {
+            if (host.data('editor')) return;
+            var editor = ace.edit(host[0]),
+                session = editor.getSession(),
+                dark = document.documentElement.getAttribute('data-bs-theme') == 'dark',
+                timer = null;
+            editor.setOptions({minLines: 3, maxLines: 40, fontSize: '0.875rem',
+                               showPrintMargin: false, highlightActiveLine: false,
+                               tabSize: 4, useSoftTabs: true});
+            editor.setTheme(dark ? 'ace/theme/tomorrow_night' : 'ace/theme/xcode');
+            session.getDocument().setNewLineMode('unix');
+            session.setMode(scriptMode(text));
+            editor.setValue(text, -1);
+            function save() {
+                clearTimeout(timer);
+                var path = host.closest('[data-bs-path]').attr('data-bs-path'),
+                    value = editor.getValue();
+                if (valueAt(opt, path) === value) return;
+                feed(opt.original, path, value);
+                session.setMode(scriptMode(value));
+                refreshCardHeader(host);
+                opt.onchange(opt.original);
+            }
+            session.on('change', function() {
+                clearTimeout(timer);
+                timer = setTimeout(save, 400);
+            });
+            editor.on('blur', save);
+            host.data('editor', editor);
+        }
+        if (host.closest('.collapsed').length) {
+            host.one('plist:expand', init);
+        } else {
+            // once the row is in the page, so Ace can measure it
+            setTimeout(init, 0);
+        }
+    }
+
+    function expandScripts(card) {
+        card.find('.plist-script').trigger('plist:expand');
+    }
+
+    function destroyScripts(root) {
+        root.find('.plist-script').each(function() {
+            var editor = $(this).data('editor');
+            if (editor) editor.destroy();
+        });
     }
 
     function scheduleResizeText(opt) {
@@ -274,6 +372,17 @@
         var row = root.find('[data-bs-path]').filter(function() {
             return this.getAttribute('data-bs-path') === path;
         }).first();
+        var script = row.find('.plist-script').first();
+        if (!onKey && script.length) {
+            // the editor is created once the row is in the page
+            setTimeout(function() {
+                var editor = script.data('editor');
+                if (!editor) return;
+                script[0].scrollIntoView({block: 'nearest'});
+                editor.focus();
+            }, 0);
+            return;
+        }
         var field = onKey ? row.find('.property').first() :
             row.find('textarea.value, input.value, select.value')
                .not('[type=checkbox]').first();
@@ -300,6 +409,8 @@
         }
         function addNamed(key) {
             obj[key] = get_default_value(childPath(key), opt.key_types);
+            // show what was just added rather than a collapsed card
+            setExpanded(obj[key], childPath(key), true);
             added(key, false);
         }
         function addOther() {
@@ -464,30 +575,65 @@
         return toggle;
     }
 
-    function sectionSummary(val) {
-        if (isArray(val)) {
-            return val.length + (val.length == 1 ? ' entry' : ' entries');
-        }
-        return cardSummary(val, false);
+    // Is a value a script, or does it have more than one entry, and so
+    // become a value card?
+    function isCollapsible(opt, val, path) {
+        if (!opt.collapse_values) return false;
+        if (isScript(path, val)) return !!window.ace;
+        var size = isArray(val) ? val.length :
+                   isObject(val) ? Object.keys(val).length : 0;
+        return size > 1;
     }
 
-    // A key holding cards or a dict is itself a card: the row is the frame and
-    // its key cell the header. Looks up the value when toggled, as reordering
+    // e.g. "3 entries: testing, production, beta", "2 keys: path, md5checksum"
+    // or "#!/bin/sh · 12 lines"
+    function valueSummary(val) {
+        if (isString(val)) {
+            var lines = val ? val.split('\n') : [];
+            return (lines[0] ? lines[0] + ' · ' : '') + lines.length +
+                   (lines.length == 1 ? ' line' : ' lines');
+        }
+        var parts = isArray(val) ? val : Object.keys(val || {}),
+            nouns = isArray(val) ? ['entry', 'entries'] : ['key', 'keys'],
+            count = parts.length + ' ' + nouns[parts.length == 1 ? 0 : 1],
+            names = parts.filter(function(part) {
+                return isString(part) || isNumber(part);
+            });
+        return names.length && names.length == parts.length ?
+            count + ': ' + names.join(', ') : count;
+    }
+
+    // A value with more than one entry sits in the value column as a card,
+    // collapsed until the user expands it. Returns the card's body, which the
+    // value is rendered into. Looks up the value when toggled, as reordering
     // replaces the array and renaming changes the row's path.
-    function makeSection(opt, tableRow, rowHeader, val) {
-        var summary = $('<span>', {'class': 'plist-card-summary'}),
-            collapsed = collapsedCards.has(val);
-        tableRow.addClass('plist-section').toggleClass('collapsed', collapsed);
-        summary.text(sectionSummary(val));
-        rowHeader.prepend(collapseToggle(collapsed, function() {
-            var current = valueAt(opt, tableRow.data('bs-path')),
-                nowCollapsed = tableRow.toggleClass('collapsed').hasClass('collapsed');
-            if (nowCollapsed) collapsedCards.add(current); else collapsedCards.delete(current);
-            summary.text(sectionSummary(current));
-            if (!nowCollapsed) resizeText(tableRow);
+    function valueCard(opt, tableRow, cell, val) {
+        var card = $('<div>', {'class': 'plist-card plist-value-card'}),
+            header = $('<div>', {'class': 'plist-card-header'}),
+            summary = $('<span>', {'class': 'plist-card-summary'}),
+            body = $('<div>', {'class': 'plist-card-body',
+                               'data-bs-type': getType(val)}),
+            collapsed = !isExpanded(val, tableRow.attr('data-bs-path'));
+        function current() {
+            return valueAt(opt, tableRow.attr('data-bs-path'));
+        }
+        var toggle = collapseToggle(collapsed, function() {
+            var nowCollapsed = card.toggleClass('collapsed').hasClass('collapsed');
+            setExpanded(current(), tableRow.attr('data-bs-path'), !nowCollapsed);
+            if (!nowCollapsed) expandScripts(card);
+            if (!nowCollapsed) resizeText(card);
             return nowCollapsed;
-        }));
-        rowHeader.append(summary);
+        });
+        header.on('click', function(event) {
+            if (!$(event.target).closest('.plist-card-toggle').length) toggle.click();
+        });
+        card.toggleClass('collapsed', collapsed);
+        card.data('refreshHeader', function() {
+            summary.text(valueSummary(current()));
+        });
+        summary.text(valueSummary(val));
+        cell.append(card.append(header.append(toggle, summary), body));
+        return body;
     }
 
     function buildCard(opt, obj, path, isConditional, content, adder) {
@@ -500,6 +646,7 @@
             toggle = collapseToggle(collapsed, function() {
                 var nowCollapsed = card.toggleClass('collapsed').hasClass('collapsed');
                 if (nowCollapsed) collapsedCards.add(obj); else collapsedCards.delete(obj);
+                if (!nowCollapsed) expandScripts(card);
                 if (!nowCollapsed) resizeText(card);
                 return nowCollapsed;
             });
@@ -607,11 +754,12 @@
 
     function construct(opt, obj, root, path) {
         path = path || '';
+        destroyScripts(root);
         root.children().remove();
         scheduleResizeText(opt);
         var objType = getType(obj);
         if (objType == 'dict') {
-            // a dict under a key is framed by its row; see makeSection
+            // a dict in an array is a card; under a key it may be a value card
             var isCard = isArrayItem(opt, path),
                 isConditional = isCard && isConditionalItem(path, obj),
                 table = $('<table>', {"class": "table table-sm plist-table"}),
@@ -627,10 +775,7 @@
                 if (isConditional && key == 'condition') continue;
                 if (obj.hasOwnProperty(key)) {
                     var dataPath = (path ? path + '.' : '') + key;
-                    var isSection = holdsCards(opt, obj[key], dataPath);
-                    var isStacked = isSection || (isArray(obj[key]) && path !== '');
                     var tableRow = $('<tr>', {'data-bs-path': dataPath});
-                    tableRow.toggleClass('plist-stacked', isStacked);
                     var rowHeader = $('<th>', {'scope': 'row'});
                     if (!opt.key_list) {
                         var keyElement = $('<input>',
@@ -643,10 +788,11 @@
                         keyElement.val(key).attr('title', key);
                     }
                     rowHeader.append(keyElement);
-                    if (isSection) makeSection(opt, tableRow, rowHeader, obj[key]);
                     var rowValue = $('<td>',
                                      {'data-bs-type': getType(obj[key])});
-                    construct(opt, obj[key], rowValue, dataPath);
+                    var valueHost = isCollapsible(opt, obj[key], dataPath) ?
+                        valueCard(opt, tableRow, rowValue, obj[key]) : rowValue;
+                    construct(opt, obj[key], valueHost, dataPath);
                     tableRow.append(rowHeader).append(rowValue);
                     if (!opt.key_list) {
                        // only show delete control if we aren't showing the
@@ -718,9 +864,13 @@
                         }
                         newArray.push(val);
                     });
-                    var valueElement = $(event.target).closest('td'),
+                    // the array's cell, or the body of its value card
+                    var valueElement = $(event.target).closest('[data-bs-type]'),
                         parentTableRow = valueElement.closest('tr'),
                         path = parentTableRow.data('bs-path');
+                    if (expandedValues.has(valueAt(opt, path))) {
+                        expandedValues.add(newArray);
+                    }
                     feed(opt.original, path, newArray);
                     construct(opt, newArray, valueElement, path);
                     refreshCardHeader(valueElement);
@@ -749,9 +899,11 @@
             root.append(valueElement);
             valueElement.change(valueChanged(opt));
         } else if (objType == 'boolean') {
-            valueElement = checkbox(obj)
-            root.append(valueElement);
-            valueElement.change(valueChanged(opt));
+            var toggleSwitch = checkbox(obj);
+            root.append(toggleSwitch);
+            toggleSwitch.find('input').change(valueChanged(opt));
+        } else if (objType == 'string' && isScript(path, obj) && window.ace) {
+            scriptEditor(opt, root, obj);
         } else if (objType == 'string') {
             var rows = obj.split('\n').length;
             if (rows == 1 && obj.length > 79) { rows = 2 };
@@ -779,11 +931,21 @@
         }
     };
 
+    var switchCount = 0;
+
+    // a toggle switch labelled with the plist value
     function checkbox(currentValue) {
-        var s = $('<input />', 
-            {'type': 'checkbox', 'class': 'value'}).prop(
-                "checked", currentValue);
-        return s;
+        var id = 'plist-switch-' + (++switchCount),
+            input = $('<input>', {'type': 'checkbox', 'role': 'switch', 'id': id,
+                                  'class': 'form-check-input value'})
+                .prop('checked', currentValue),
+            label = $('<label>', {'class': 'form-check-label', 'for': id})
+                .text(currentValue ? 'true' : 'false');
+        input.on('change', function() {
+            label.text(this.checked ? 'true' : 'false');
+        });
+        return $('<div>', {'class': 'form-check form-switch plist-switch'})
+            .append(input, label);
     }
 
     function typeSelect() {
@@ -851,7 +1013,9 @@
                 //paths for all sub-elements need to be updated, so just
                 //re-construct the value
                 //th is $(this).parent(); next item is td (value)
-                var valueElement = $(this).parent().next();
+                var valueElement = $(this).parent().next(),
+                    cardBody = valueElement.find('> .plist-value-card > .plist-card-body');
+                if (cardBody.length) valueElement = cardBody;
                 valueElement.attr('data-bs-type', getType(val));
                 if (hadNoValue && (isArray(val) || isObject(val))) {
                     // the row's layout depends on what its value holds
@@ -870,7 +1034,7 @@
     // Rebuild the container a row lives in, for when the row's own layout or
     // the paths of its siblings have changed.
     function renderParent(opt, tableRow, path) {
-        var container = tableRow.parent().closest('td[data-bs-type], .plist-root'),
+        var container = tableRow.parent().closest('[data-bs-type], .plist-root'),
             containerPath = parentPath(path);
         construct(opt, valueAt(opt, containerPath), container, containerPath);
     }
@@ -895,7 +1059,7 @@
 
     function getValue(valueElement, path) {
         console.log(valueElement);
-        var type = $(valueElement).parent().data('bs-type');
+        var type = $(valueElement).closest('[data-bs-type]').data('bs-type');
         if (type == 'string') {
             // do not parse value; just return it as-is
             val = $(valueElement).val();

@@ -153,69 +153,77 @@ a.sidebar-link {
     padding: .2rem;
 }
 
-/* keys holding lists or cards sit above their value, using the full width */
-.plist-root .plist-table > tbody > tr.plist-stacked {
-    grid-template-columns: minmax(0, 1fr) auto;
+/* a value with more than one entry is a collapsible card in the value column */
+.plist-root .plist-value-card {
+    margin-bottom: 0;
 }
 
-.plist-root .plist-stacked > td[data-bs-type] {
-    grid-column: 1 / -1;
-    grid-row: 2;
+.plist-root .plist-value-card > .plist-card-header {
+    align-items: center;
+    cursor: pointer;
 }
 
-.plist-root .plist-stacked > th .property {
-    max-width: 20rem;
-    font-weight: 600;
+.plist-root .plist-value-card > .plist-card-header > .plist-card-summary {
+    display: inline;
+    flex: 1;
+    min-width: 0;
+    padding-top: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.plist-root .plist-card-body .plist-stacked > td[data-bs-type] {
-    padding-left: 1rem;
-}
-
-/* a key holding cards or a dict is itself a card */
-.plist-root .plist-table > tbody > tr.plist-section {
-    column-gap: 0;
-    align-items: stretch;
-    border: 1px solid var(--bs-border-color);
-    border-radius: var(--bs-border-radius);
-    margin: 1rem 0;
+.plist-root .plist-value-card {
     overflow: hidden;
 }
 
-.plist-root .plist-table > tbody > tr.plist-section > th,
-.plist-root .plist-table > tbody > tr.plist-section > .row-controls {
-    background-color: var(--bs-tertiary-bg);
-    border-bottom: 1px solid var(--bs-border-color);
-    padding: .35rem .5rem;
+/* scripts: an Ace editor with line numbers, filling its card */
+.plist-root .plist-script {
+    min-height: 4.5rem;
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius);
 }
 
-.plist-root .plist-table > tbody > tr.plist-section > th {
-    display: flex;
+.plist-root .plist-card-body:has(> .plist-script) {
+    padding: 0;
+}
+
+.plist-root .plist-card-body > .plist-script {
+    border: 0;
+    border-radius: 0;
+}
+
+/* booleans: a toggle switch labelled with the value */
+.plist-root .plist-switch {
+    display: inline-flex;
     align-items: center;
-    gap: .5rem;
+    gap: .6rem;
+    min-height: calc(1.5em + .75rem + 2px);
+    margin: 0;
+    padding-left: 0;
 }
 
-.plist-root .plist-table > tbody > tr.plist-section > td[data-bs-type] {
-    padding: .5rem .75rem;
+.plist-root .plist-switch .form-check-input {
+    width: 2.75em;
+    height: 1.5em;
+    margin: 0;
+    float: none;
+    cursor: pointer;
+    transition: background-position .15s ease-in-out, background-color .15s ease-in-out,
+                border-color .15s ease-in-out, box-shadow .15s ease-in-out;
 }
 
-.plist-root .plist-section.collapsed > td[data-bs-type] {
-    display: none;
+.plist-root .plist-switch .form-check-label {
+    min-width: 2.5rem;
+    font-family: var(--bs-font-monospace);
+    font-size: .875em;
+    color: var(--bs-secondary-color);
+    cursor: pointer;
+    user-select: none;
 }
 
-.plist-root .plist-table > tbody > tr.plist-section.collapsed > th,
-.plist-root .plist-table > tbody > tr.plist-section.collapsed > .row-controls {
-    border-bottom: 0;
-}
-
-.plist-root .plist-section.collapsed > th > .plist-card-toggle > .fa {
-    transform: rotate(-90deg);
-}
-
-.plist-root .plist-section.collapsed > th > .plist-card-summary {
-    display: inline;
-    padding-top: 0;
-    font-weight: 400;
+.plist-root .plist-switch .form-check-input:checked + .form-check-label {
+    color: var(--bs-primary);
+    font-weight: 600;
 }
 
 .plist-root .plist-table > tbody > tr.plist-card-row {
