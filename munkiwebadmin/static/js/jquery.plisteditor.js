@@ -919,6 +919,11 @@
                 handle: '.grabber',
                 axis: 'y',
                 start: function(event, ui) {
+                    // sortable swallows the mousedown, so a field that is
+                    // still being edited never blurs and its change event
+                    // never fires: commit it now or the rebuild loses it
+                    var active = document.activeElement;
+                    if (active && $.contains(table[0], active)) active.blur();
                     // store the value for the object that is moving
                     // so we still have it if the object is dragged
                     // to a different array
