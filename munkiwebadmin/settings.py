@@ -61,6 +61,21 @@ CATALOGS_TO_DISPLAY = os.getenv('CATALOGS_TO_DISPLAY', '[]').split()
 # only show packages whose _metadata.created_by matches; empty shows all
 PACKAGES_CREATED_BY = os.getenv('PACKAGES_CREATED_BY', 'gitlab')
 
+# Windmill flow behind "Create AutoPkg override" on the Package Info page.
+# The token stays on the server; the flow runs with its owner's permissions.
+WINDMILL_TOKEN = os.getenv('WINDMILL_TOKEN', '')
+WINDMILL_WORKSPACE_URL = os.getenv(
+    'WINDMILL_WORKSPACE_URL', 'https://app.windmill.dev/api/w/baumann-marius')
+WINDMILL_AUTOPKG_FLOW = os.getenv(
+    'WINDMILL_AUTOPKG_FLOW', 'f/CreateAutoPKG/create_override')
+# flow inputs that aren't asked in the form
+WINDMILL_AUTOPKG_DEFAULTS = {
+    'gitlab': os.getenv('AUTOPKG_GITLAB_RESOURCE', '$res:f/CreateAutoPKG/gitlab'),
+    'github': os.getenv('AUTOPKG_GITHUB_RESOURCE', '$res:f/CreateAutoPKG/github'),
+    'gitlab_project': os.getenv(
+        'AUTOPKG_GITLAB_PROJECT', 'umbag/services/Workplace/autopkg-recipeoverrides'),
+}
+
 # CORS settings
 CORS_ORIGIN_ALLOW_ALL = DEBUG
 CORS_ORIGIN_WHITELIST = ()

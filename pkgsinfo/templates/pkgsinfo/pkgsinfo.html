@@ -14,6 +14,7 @@
 <script type="text/javascript" charset="utf-8" src="{% get_static_prefix %}js/ace/src-min-noconflict/ace.js"></script>
 <script type='text/javascript' src='{% get_static_prefix %}js/mwa_editor_shared.js'></script>
 <script type='text/javascript' src='{% get_static_prefix %}pkgsinfo/js/pkgsinfo.js'></script>
+<script type='text/javascript' src='{% get_static_prefix %}pkgsinfo/js/autopkg.js'></script>
 <script type='text/javascript' src='{% get_static_prefix %}js/chosen.jquery.min.js'></script>
 {% endblock java_script %}
 
@@ -31,6 +32,7 @@
   </div>
   <button type="button" id="makecatalogs" class="btn btn-primary" onClick="requestMakecatalogs()">Makecatalogs</button>
   <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#uploadModal">Upload Package</button>
+  <button type="button" class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#autopkgModal">AutoPkg Override <span class="badge bg-danger ms-1">Beta</span></button>
   <div class="btn-group" role="group">
     <button type="button" id="massaction_dropdown" class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Actions for selected items">
       <i class="fa fa-cog" aria-hidden="true"></i>
@@ -203,6 +205,78 @@ Bootstrap modal for errors
       <div class="modal-footer">
         <button type="button" id="closeButton" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
         <button type="button" id="uploadButton" class="btn btn-primary" onclick="uploadPackage()">Upload</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Create AutoPkg override (Windmill flow, pkgsinfo/autopkg.py) -->
+<div class="modal fade" id="autopkgModal" tabindex="-1" aria-labelledby="autopkgModalLabel" aria-hidden="true" data-bs-backdrop="static">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h4 class="modal-title" id="autopkgModalLabel">Create AutoPkg Override <span class="badge bg-danger fs-6 align-middle">Beta</span></h4>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="autopkgForm" novalidate>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label for="ap_software_name" class="form-label">Software name *</label>
+              <input class="form-control" id="ap_software_name" name="software_name" placeholder="e.g. CalibriteProfiler" required>
+            </div>
+            <div class="col-md-6">
+              <label for="ap_display_name" class="form-label">Display name</label>
+              <input class="form-control" id="ap_display_name" name="display_name" placeholder="e.g. Calibrite Profiler">
+            </div>
+            <div class="col-12">
+              <label for="ap_download_url" class="form-label">Download URL *</label>
+              <input class="form-control" type="url" id="ap_download_url" name="download_url" placeholder="https://…/app.dmg" required>
+            </div>
+            <div class="col-md-6">
+              <label for="ap_developer" class="form-label">Developer</label>
+              <input class="form-control" id="ap_developer" name="developer">
+            </div>
+            <div class="col-md-6">
+              <label for="ap_vendor" class="form-label">Vendor</label>
+              <input class="form-control" id="ap_vendor" name="vendor">
+            </div>
+            <div class="col-md-6">
+              <label for="ap_category" class="form-label">Category</label>
+              <input class="form-control" id="ap_category" name="category">
+            </div>
+            <div class="col-md-6">
+              <label for="ap_catalogs" class="form-label">Catalogs</label>
+              <input class="form-control" id="ap_catalogs" name="catalogs" value="autopkg" placeholder="comma separated">
+            </div>
+            <div class="col-12">
+              <label for="ap_description" class="form-label">Description</label>
+              <textarea class="form-control" id="ap_description" name="description" rows="2"></textarea>
+            </div>
+            <div class="col-md-6">
+              <div class="form-check form-switch"><input class="form-check-input" type="checkbox" role="switch" id="ap_unattended_install" name="unattended_install" checked><label class="form-check-label" for="ap_unattended_install">Unattended install</label></div>
+              <div class="form-check form-switch"><input class="form-check-input" type="checkbox" role="switch" id="ap_unattended_uninstall" name="unattended_uninstall" checked><label class="form-check-label" for="ap_unattended_uninstall">Unattended uninstall</label></div>
+              <div class="form-check form-switch"><input class="form-check-input" type="checkbox" role="switch" id="ap_run_build" name="run_build" checked><label class="form-check-label" for="ap_run_build">Run build</label></div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-check form-switch"><input class="form-check-input" type="checkbox" role="switch" id="ap_prefer_own_recipe" name="prefer_own_recipe"><label class="form-check-label" for="ap_prefer_own_recipe">Prefer own recipe</label></div>
+              <div class="form-check form-switch"><input class="form-check-input" type="checkbox" role="switch" id="ap_overwrite" name="overwrite"><label class="form-check-label" for="ap_overwrite">Overwrite existing override</label></div>
+            </div>
+            <div class="col-md-6">
+              <label for="ap_munki_repo_subdir" class="form-label">Munki repo subdirectory</label>
+              <input class="form-control" id="ap_munki_repo_subdir" name="munki_repo_subdir" placeholder="e.g. apps/calibrite">
+            </div>
+            <div class="col-md-6">
+              <label for="ap_parent_recipe" class="form-label">Parent recipe</label>
+              <input class="form-control" id="ap_parent_recipe" name="parent_recipe" placeholder="found automatically if empty">
+            </div>
+          </div>
+        </form>
+        <div id="autopkgStatus" class="mt-3"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" id="autopkgSubmit" class="btn btn-primary">Create override</button>
       </div>
     </div>
   </div>
